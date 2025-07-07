@@ -1,5 +1,7 @@
 # evaluation-tools
-軌跡評価の為のライブラリ/コマンドラインツール
+A library and command-line tools for trajectory evaluation
+
+[Documents Pages](https://pdr-benchmark-standardization-committee.github.io/evaluation-tools_docs/)
 
 ## Setup
 ```~\evaluation-tools> pip install -e .```
