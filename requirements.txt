@@ -1,0 +1,8 @@
+numpy
+scipy
+pandas
+matplotlib
+pillow
+seaborn
+joblib
+shapely

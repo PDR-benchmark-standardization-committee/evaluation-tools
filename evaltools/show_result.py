@@ -1,0 +1,178 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from evaltools.com_tools.frfw_tools import *
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+import sys
+import argparse
+import json
+import warnings
+warnings.filterwarnings("ignore")
+
+WEIGHTS = {'ce': 1/6, 'rha': 1/6, 'rda_exhibit': 1/6,
+           'rpa_exhibit': 1/6, 'rda_robot': 1/6, 'rpa_robot': 1/6}
+
+
+def main(eval_middle_filenames, sections_filename):
+    df_m = pd.concat([load_csv(filename)
+                     for filename in eval_middle_filenames], ignore_index=True)
+
+    # 時刻区間の指定
+    if sections_filename is None:
+        time_intervals = [[df_m.index.min(), df_m.index.max()]]
+    else:
+        time_intervals = load_json(sections_filename)['sections']
+        if len(time_intervals) < 1:
+            time_intervals = [[df_m.index.min(), df_m.index.max()]]
+
+    result_dict = {}
+    type_list = np.unique(df_m.type)
+    df_overall = pd.DataFrame()
+    for interval in time_intervals:
+        s, e = interval
+        df_m_interval = df_m[(s <= df_m.index) & (df_m.index <= e)]
+
+        df_overall = pd.concat([df_overall, df_m_interval])
+
+    df_overall.sort_index(inplace=True)
+
+    for type_tag in type_list:
+        df_type = df_overall[df_overall.type == type_tag]
+        if type_tag == 'oe' or type_tag == 'fe':
+            res = get_evalresult_boolean(df_type)
+        else:
+            res = get_evalresult_traj(df_type)
+
+        result_dict[F'{type_tag}'] = res
+
+    # xDR_Challenge_2025用
+    # rpa_12, rpa_21 --> rpa_exhibit, rpa_robot 等で区別する
+    if 'rel_target' in df_overall.columns:
+        for type_tag in ['rda', 'rpa']:
+            mask = df_overall['type'].str.contains(type_tag, na=False)
+            df_type = df_overall[mask]
+            try:
+                del result_dict[F'{type_tag}_12']
+                del result_dict[F'{type_tag}_21']
+            except:
+                pass
+
+            rel_targets = np.unique(df_type.rel_target)
+            for rel_target in rel_targets:
+                df_rel_target = df_type[df_type.rel_target == rel_target]
+
+                res = get_evalresult_traj(df_rel_target)
+
+                result_dict[F'{type_tag}_{rel_target}'] = res
+
+    return result_dict
+
+
+def get_evalresult_traj(df_type):
+    df_type['value'] = df_type['value'].astype(float)
+
+    result = {}
+    result['avg'] = df_type.value.mean()
+    result['median'] = df_type.value.median()
+    result['min'] = df_type.value.min()
+    result['max'] = df_type.value.max()
+    result['per50'] = np.percentile(df_type.value, 50)
+    result['per75'] = np.percentile(df_type.value, 75)
+    result['per90'] = np.percentile(df_type.value, 90)
+    result['per95'] = np.percentile(df_type.value, 95)
+
+    return result
+
+
+def get_evalresult_boolean(df_type):
+    df_type['value'] = df_type['value'].astype(float)
+    # return len(df_type)/len(df_type[df_type.value == 1])
+    return np.sum(df_type.value)/len(df_type)
+
+
+def calc_Competition_Score(result_dict, weights_table=None, output_dir='./'):
+    """
+    xDR_Challenge_2025 Competitionの最終スコア計算
+    """
+    if weights_table is None:
+        weights_table = WEIGHTS
+
+    Score = weights_table['ce'] * result_dict['ce']['per95'] + \
+        weights_table['rha'] * result_dict['rha']['per95'] + \
+        weights_table['rda_exhibit'] * result_dict['rda_exhibit']['per95'] + \
+        weights_table['rpa_exhibit'] * result_dict['rpa_exhibit']['per95'] + \
+        weights_table['rda_robot'] * result_dict['rda_robot']['per95'] + \
+        weights_table['rpa_robot'] * result_dict['rpa_robot']['per95']
+
+    result_dict['Score'] = Score
+    print(Score)
+
+    plot_Score_bar(result_dict, weights_table, output_dir)
+
+    return result_dict
+
+
+def plot_Score_bar(result, weights_table, output_dir='./'):
+    labels = []
+    values = []
+    values_weighted = []
+    for key, value in result.items():
+        print(key, value)
+        if key in ['ce', 'rha', 'rda_robot', 'rda_exhibit', 'rpa_robot', 'rpa_exhibit']:
+            labels.append(key)
+            values.append(value['per95'])
+            values_weighted.append(value['per95'] * weights_table[key])
+
+    # 描画
+    fig, ax = plt.subplots(1, 2, figsize=(12, 8))
+
+    TotalScore = result['Score']
+    Weights = [f"{x:.3f}" for x in weights_table.values()]
+    fig.suptitle(F'Total Score:{TotalScore}, weights={Weights}')
+
+    ax[0].bar(labels, values)
+    ax[0].set_ylabel('Score (unweighted)')
+    ax[0].set_xticks(labels)
+    ax[0].set_xticklabels(['CE95', 'HE95', 'RDA_robot95',
+                          'RDA_exhibit95', 'RPA_robot95', 'RPA_exhibit95'], fontsize=8)
+
+    ax[1].bar(labels, values_weighted)
+    ax[1].set_ylabel('Score (weighted)')
+    ax[1].set_xticks(labels)
+    ax[1].set_xticklabels(['CE95', 'HE95', 'RDA_robot95',
+                          'RDA_exhibit95', 'RPA_robot95', 'RPA_exhibit95'], fontsize=8)
+
+    plt.tight_layout()
+    os.makedirs(output_dir, exist_ok=True)
+    plt.savefig(F'{output_dir}{os.sep}Score_graph.png', dpi=200)
+
+
+def main_cl():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('-eval_middle_files', '-m', nargs='+',
+                        help="List of CSV files to evaluate")
+    parser.add_argument('--output_json', '-o', default="./")
+    parser.add_argument('-sections_file', '-s')
+
+    args = parser.parse_args()
+
+    if not args.eval_middle_files:
+        print("Error: No input files provided.")
+        sys.exit(1)
+
+    result_dict = main(args.eval_middle_files, args.sections_file)
+    print(result_dict)
+
+    result_dict = calc_Competition_Score(
+        result_dict, output_dir=args.output_json)
+
+    os.makedirs(args.output_json, exist_ok=True)
+    with open(f'{args.output_json}eval_summary.json', 'w', encoding='utf-8') as jf:
+        json.dump(result_dict, jf, ensure_ascii=False, indent=4)
+
+
+if __name__ == '__main__':
+
+    main_cl()
