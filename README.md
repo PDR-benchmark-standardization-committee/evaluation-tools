@@ -3,6 +3,9 @@ A library and command-line tools for trajectory evaluation
 
 [Documents Pages](https://pdr-benchmark-standardization-committee.github.io/evaluation-tools_docs/)
 
+This tool supports most of the metrics defined in [ISO/IEC 21134 Information technology — Computer graphics, image processing and environmental data representation — Benchmarking of integrated indoor localization and tracking methods using dead reckoning](https://www.iso.org/standard/86651.html).
+
+
 ## Setup
 ```~\evaluation-tools> pip install -e .```
 
