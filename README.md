@@ -148,3 +148,5 @@ This tool supports most of the metrics defined in [ISO/IEC 21134 Information tec
     returns
         None
 
+## License (to be updated.)
+For non-commercial use only. For commercial use, contact us.
