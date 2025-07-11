@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation
 
 
-def eval_EAG_tl(df_gt_data, df_est, ALIP_timerange=[], mode='T', verbose=False):
+def eval_EAG_tl(df_gt_data, df_est, ALIP_timerange=[], mode='T', is_realtime=False, verbose=False):
     """
     Calculate Error Accumulation Gradient
 
@@ -23,6 +23,9 @@ def eval_EAG_tl(df_gt_data, df_est, ALIP_timerange=[], mode='T', verbose=False):
         Time range, [float, float]
     mode : {'T', 'D', 'A'}
         Mode of EAG calculation: Time, Distance, or Angle.
+    is_realtime : boolean
+        realtime: Use only ALIP-start to calculate relative timestamp
+        batch   : Calculate relative time from the closer of the ALIP-start or ALIP-end.
     verbose : boolean
         Added intermediate data used for graph plotting to the return value.
 
@@ -31,21 +34,37 @@ def eval_EAG_tl(df_gt_data, df_est, ALIP_timerange=[], mode='T', verbose=False):
     result : pandas.DataFrame
         Error at each timestamp, columns: [timestamp, type, value]
     """
-    try:
-        if mode == 'T':
-            df_eag_tl = calc_T_EAG(df_gt_data, df_est, ALIP_timerange, verbose)
-        elif mode == 'D':
-            df_eag_tl = calc_D_EAG(df_gt_data, df_est, ALIP_timerange)
-        elif mode == 'A':
-            df_eag_tl = calc_A_EAG(df_gt_data, df_est, ALIP_timerange)
-    except Exception as e:
-        print(e)
+    if type(ALIP_timerange) == str:
+        df_ALIP = pd.read_csv(ALIP_timerange, header=0)
+
+    df_eag_tl = None
+    for _, row in df_ALIP.iterrows():
+        ALIP_timerange = [row.ts_start, row.ts_end]
+        try:
+            if mode == 'T':
+                df_eag_tl_ALIP = calc_T_EAG(
+                    df_gt_data, df_est, ALIP_timerange, is_realtime, verbose)
+            elif mode == 'D':
+                df_eag_tl_ALIP = calc_D_EAG(df_gt_data, df_est, ALIP_timerange)
+            elif mode == 'A':
+                df_eag_tl_ALIP = calc_A_EAG(df_gt_data, df_est, ALIP_timerange)
+
+            if df_eag_tl is None:
+                df_eag_tl = df_eag_tl_ALIP
+            else:
+                if verbose:
+                    df_eag_tl = [
+                        pd.concat([df_eag_tl[idx], df_eag_tl_ALIP[idx]]) for idx in range(0, 3)]
+                else:
+                    df_eag_tl = pd.concat([df_eag_tl, df_eag_tl_ALIP])
+        except Exception as e:
+            print(e)
 
     return df_eag_tl
 
 
 ###
-def calc_T_EAG(df_gt_data, df_est, ALIP_timerange=[], verbose=False):
+def calc_T_EAG(df_gt_data, df_est, ALIP_timerange=[], is_realtime=False, verbose=False):
     """
     Calculate EAG based on Time
     """
@@ -58,14 +77,19 @@ def calc_T_EAG(df_gt_data, df_est, ALIP_timerange=[], verbose=False):
     df_gt_data = df_gt_data[ALIP_start:ALIP_end]
     df_est = df_est[ALIP_start:ALIP_end]
 
-    # convert to relative time near ALIP-start time and ALIP-end time
     df_gt_data['delta_ts'] = df_gt_data.index
-    df_gt_data['delta_ts'][ALIP_start:ALIP_start +
-                           (ALIP_end - ALIP_start)/2] -= ALIP_start
-    df_gt_data['delta_ts'][ALIP_start +
-                           (ALIP_end - ALIP_start)/2:ALIP_end] -= ALIP_end
-    df_gt_data['delta_ts'][ALIP_start +
-                           (ALIP_end - ALIP_start)/2:ALIP_end] *= -1
+    mid = ALIP_start + (ALIP_end - ALIP_start) / 2
+
+    # ALIP timerangeを適用
+    if is_realtime:
+        df_gt_data['delta_ts'] -= ALIP_start
+    else:
+        df_gt_data.loc[(df_gt_data.index >= ALIP_start) & (
+            df_gt_data.index < mid), 'delta_ts'] -= ALIP_start
+        df_gt_data.loc[(df_gt_data.index >= mid) & (
+            df_gt_data.index <= ALIP_end), 'delta_ts'] -= ALIP_end
+        df_gt_data.loc[(df_gt_data.index >= mid) & (
+            df_gt_data.index <= ALIP_end), 'delta_ts'] *= -1
 
     df_gt_data = df_gt_data.dropna(subset=("x", "y"))
     df_est = df_est.dropna(subset=("x", "y"))

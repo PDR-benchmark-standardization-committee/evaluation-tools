@@ -1,6 +1,6 @@
 {
     "CE":[true, {}],
-    "EAG":[true, {}],
+    "EAG":[true, {"ALIP_timerange":"data/ALIP/", "is_realtime":true}],
     "CA":[true, {"mode_CS":"RCS"}],
     "VE":[true, {"is_neg":false}],
     "OE":[true, {"bitmap_path":"data/map/map_comp2025.bmp", "scale":0.01, "O":[-5.625, -12.75]}],
