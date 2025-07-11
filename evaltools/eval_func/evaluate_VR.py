@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import os, sys
+import os
+import sys
 import argparse
 
 import numpy as np
@@ -17,7 +18,8 @@ def eval_vr(pfloc, method='Median'):
     VecA = V1 - V0
     VecB = V2 - V1
 
-    cos = multi_dot(VecA, VecB)/(np.sqrt(multi_dot(VecA, VecA)) * np.sqrt(multi_dot(VecB, VecB)))
+    cos = multi_dot(VecA, VecB)/(np.sqrt(multi_dot(VecA, VecA))
+                                 * np.sqrt(multi_dot(VecB, VecB)))
     cos = cos[np.logical_not(np.isnan(cos))]
     rad = np.arccos(cos)
 
@@ -34,15 +36,12 @@ def multi_dot(A, B):
     return np.sum(A*B, axis=1)
 
 
-def rmse(ndarray, ndarray0 = 0):
+def rmse(ndarray, ndarray0=0):
     return float(np.sqrt(np.mean(np.square(ndarray - ndarray0))))
 
 
 def main_cl(args):
-    args.steps = r"/home/aae14982xw/indoor_platform/20230712_4th/release/pickle/test_FLD01/9_1_51.pickle"
-    args.best_param = r"/home/aae14982xw/indoor_platform/setting/"
-
-    # eval_vr(args.steps, args.best_param)
+    eval_vr(args.steps, args.best_param)
 
 
 if __name__ == '__main__':
