@@ -116,22 +116,25 @@ def check_combination_dup(comb_set):
 
 def main(est_filename, gt_filename, evaluation_setting=None):
     """
+    Perform accuracy evaluation.
+
+    This function compares ground truth and estimated data to compute accuracy metrics.
+
     Parameters
     ----------
-    est_filename : str
-        estimated trajectory filename. (.csv)
-        Format : [timestamp, x, y, yaw, floor]
-    gt_filename : str
-        ground-truth trajectory filename. (.csv)
-        Format : [timestamp, x, y, yaw, floor]
-    evaluation_setting : str
-        evaluation setting filename. (.json)
-        Format : {eval_name:[bool, param_list], ...}
+    est_filename : String
+        Estimated trajectory filename (.csv), columns: [timestamp, x, y, yaw, floor]
+    gt_filename : String
+        Ground-Truth trajectory filename (.csv), columns: [timestamp, x, y, yaw, floor]
+    evaluation_setting : String
+        Evaluation setting filename (.json), format: {eval_name:[bool, param_list], ...}
 
-    Retruns
+    Returns
     ----------
-    df_evaluation_results_tl : pd.DataFrame
-        middle data of evaluation results
+    df_evaluation_results_tl : pandas.DataFrame
+        Middle data of evaluation results, columns: [timestamp, type, value]
+        type: Type of evaluation, {CE, CA, EAG, VE, OE, ...}
+        value: Error at each timestamp
     """
     if evaluation_setting is None:
         # 無ければdefault
@@ -172,19 +175,26 @@ def pickle_rapper(pickle_filename, evaluation_setting):
 
 
 def main_cl():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Calculates the Absolute Localization Error between estimated and ground-truth trajectories.")
 
-    parser.add_argument('--est', '-e', nargs="*")
-    parser.add_argument('--gt', '-g', nargs="*")
+    parser.add_argument('--est', '-e', nargs="*",
+                        help="Estimated trajectory filename")
+    parser.add_argument('--gt', '-g', nargs="*",
+                        help="Ground-Truth trajectory filename")
 
-    parser.add_argument('-est_dir', '-ed', default=None)
-    parser.add_argument('-gt_dir', '-gd', default=None)
-    parser.add_argument('--combination_table', '-t', default=None)
+    parser.add_argument('-est_dir', '-ed', default=None,
+                        help="Estimated trajectory dirname")
+    parser.add_argument('-gt_dir', '-gd', default=None,
+                        help="Ground-Truth trajectory dirname")
+    parser.add_argument('--combination_table', '-t', default=None,
+                        help="Filename of the table listing est-gt combinations")
 
-    parser.add_argument('--setting', '-s', default=None)
-    parser.add_argument('--pickle', '-p', default=None)
+    parser.add_argument('--setting', '-s', default=None,
+                        help="Evaluation setting filename")
+    parser.add_argument('--pickle', '-p', default=None, help="Pickle format")
     parser.add_argument('--output_result', '-o',
-                        default="./evaluation_result.csv")
+                        default="./evaluation_result.csv", help="Output directory name")
 
     args = parser.parse_args()
 

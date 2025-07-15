@@ -54,9 +54,31 @@ def main_with_comb_table(est1_dir, est2_dir, gt1_dir, gt2_dir, combination_table
     """
     xDR_Challenge_2025
 
-    指定ディレクトリ内の軌跡に対してcombination_tableで指定した組み合わせの相対評価を行う。
-    est - gt間が何かしら名前で紐づけられている必要あり。
-    現状はxDR_challenge_2024の命名規則を想定する。 ex) {dataset}_{id}.csv
+    Perform relative evaluation of trajectory pairs specified in the combination_table
+    for the trajectories stored in the specified directory.
+
+    Parameters
+    ----------
+    est1_dir : String
+        Estimated trajectory dirname1
+    est2_dir : String
+        Estimated trajectory dirname2
+    gt1_dir : String
+        Ground-truth trajectory dirname1
+    gt2_dir : String
+        Ground-truth trajectory dirname2
+    combination_table : String
+        Filename of the table listing est-gt combinations
+    output_result : String
+        Output directory name
+    evaluation_setting : String
+        Relative evaluation setting filename
+
+    Returns
+    -------
+    result_overall : pandas.DataFrame
+        Intermediate file of relative evaluation results (per timestamp),
+        collumns : [timestamp, type, value, section, data_name, rel_target]
     """
     # mode=aの為,古いファイルを明示的に削除
     if os.path.exists(F'{output_result}'):
@@ -250,26 +272,37 @@ def plot_traj_with_yaw(df1, df2, img_name):
 
 
 def main_cl():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="Calculates the Relative Error between estimated and ground-truth trajectories.")
 
-    parser.add_argument('-est1', '-e1')
-    parser.add_argument('-est2', '-e2')
-    parser.add_argument('-gt1', '-g1')
-    parser.add_argument('-gt2', '-g2')
+    parser.add_argument('-est1', '-e1', help="Estimated trajectory filename1")
+    parser.add_argument('-est2', '-e2', help="Estimated trajectory filename2")
+    parser.add_argument(
+        '-gt1', '-g1', help="Ground-Truth trajectory filename1")
+    parser.add_argument(
+        '-gt2', '-g2', help="Ground-Truth trajectory filename2")
 
-    parser.add_argument('-est_dir', '-ed', default=None)
-    parser.add_argument('-gt_dir', '-gd', default=None)
+    parser.add_argument('-est_dir', '-ed', default=None,
+                        help="Estimated trajectory dirname")
+    parser.add_argument('-gt_dir', '-gd', default=None,
+                        help="Ground-Truth trajectory dirname")
 
-    parser.add_argument('-est1_dir', '-ed1', default=None)
-    parser.add_argument('-est2_dir', '-ed2', default=None)
-    parser.add_argument('-gt1_dir', '-gd1', default=None)
-    parser.add_argument('-gt2_dir', '-gd2', default=None)
+    parser.add_argument('-est1_dir', '-ed1', default=None,
+                        help="Estimated trajectory dirname1")
+    parser.add_argument('-est2_dir', '-ed2', default=None,
+                        help="Estimated trajectory dirname2")
+    parser.add_argument('-gt1_dir', '-gd1', default=None,
+                        help="Ground-Truth trajectory dirname1")
+    parser.add_argument('-gt2_dir', '-gd2', default=None,
+                        help="Ground-Truth trajectory dirname2")
 
-    parser.add_argument('--combination_table', '-t', default=None)
+    parser.add_argument('--combination_table', '-t', default=None,
+                        help="Filename of the table listing est-gt combinations")
     parser.add_argument('--output_result', '-o',
-                        default='./evaluation_result_rel.csv')
+                        default='./evaluation_result_rel.csv', help="Output directory name")
 
-    parser.add_argument('--setting', '-s', default=None)
+    parser.add_argument('--setting', '-s', default=None,
+                        help="Relative evaluation setting filename")
     # parser.add_argument('--pickle', '-p', default=None)
 
     args = parser.parse_args()

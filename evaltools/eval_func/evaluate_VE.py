@@ -11,13 +11,20 @@ def eval_VE_tl(df_est, df_gt=None, window_time=0.5):
     """
     Calc Velocity Error
 
-    df_est      : pandas.DataFrame [timestamp, x, y, floor, ...]
-            estimated position
-    df_gt  : pandas.DataFrame [timestamp, x, y, theta, floor]
-            ground truth
+    Prameters
+    ---------
+    df_est : pandas.DataFrame
+        Estimated position, columns: [timestamp, x, y, floor, ...]
+    df_gt : pandas.DataFrame
+            Ground-truth, columns: [timestamp, x, y, theta, floor]
     window_time : float
         interval time of calcurating velocity
         vel(t) = {f(t+window_time) - f(t-window_time)}/window_time
+
+    Returns
+    -------
+    result: pandas.DataFrame
+        Error at each timestamp, columns: [timestamp, type, value]
     """
     if df_gt is not None:
         df_ve_tl = calc_velocity_error_with_gt(df_est, df_gt, window_time)

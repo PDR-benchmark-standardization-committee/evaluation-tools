@@ -23,9 +23,6 @@ def eval_EAG_tl(df_gt_data, df_est, ALIP_timerange=[], mode='T', is_realtime=Fal
         Time range, [float, float]
     mode : {'T', 'D', 'A'}
         Mode of EAG calculation: Time, Distance, or Angle.
-    is_realtime : boolean
-        realtime: Use only ALIP-start to calculate relative timestamp
-        batch   : Calculate relative time from the closer of the ALIP-start or ALIP-end.
     verbose : boolean
         Added intermediate data used for graph plotting to the return value.
 

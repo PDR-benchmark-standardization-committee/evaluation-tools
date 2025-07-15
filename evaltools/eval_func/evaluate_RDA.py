@@ -13,8 +13,29 @@ debug = False
 
 def evaluate_RDA_tl(est1, est2, gt1, gt2, setname=''):
     """
-    RelativeDistanceAccuracy
-    2軌跡間の時刻毎距離とその正解軌跡間の時刻毎距離の差分
+    Calculate Relative-Distance-Accuracy Error
+
+    Computes the per-timestamp Euclidean distances between two estimated trajectories,
+    and the error with respect to the corresponding ground-truth distances.
+
+    Parameters
+    ----------
+    est1 : pandas.DataFrame
+        Estimated trajectory1, columns, [timestamp, x, y, (z,) yaw] or [timestamp, x, y, (z,) qx, qy, qz, qw]
+    est2 : pandas.DataFrame
+        Estimated trajectory2, columns, [timestamp, x, y, (z,) yaw] or [timestamp, x, y, (z,) qx, qy, qz, qw]
+    gt1 : pandas.DataFrame
+        Ground-truth trajectory corresponding to `est1`, columns, [timestamp, x, y, (z,) yaw] or [timestamp, x, y, (z,) qx, qy, qz, qw]
+    gt2 : pandas.DataFrame
+        Ground-truth trajectory corresponding to `est2`, columns, [timestamp, x, y, (z,) yaw] or [timestamp, x, y, (z,) qx, qy, qz, qw]
+    setname : String
+        Tag used to separate results by type.
+        Deprecated: use an additional column to distinguish result types instead.
+
+    Returns
+    -------
+    result: pandas.DataFrame
+        Error at each timestamp, columns: [timestamp, type, value]
     """
     # 時刻同期
     df1 = pd.merge_asof(est1, gt1, on='timestamp', tolerance=0.1,

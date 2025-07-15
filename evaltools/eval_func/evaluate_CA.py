@@ -20,17 +20,18 @@ def eval_CA_tl(df_gt_data, df_est, mode_CS='RCS'):
 
     Parameters
     ----------
-    df_gt_data : pd.DataFrame [timestamp, x, y, yaw, floor]
-        ground truth trajectory
-    df_est : pd.DataFrame [timestamp, x, y, yaw, floor]
-        estimated trajectory
-    mode_CS : str ('RCS' or 'ACS')
+    df_gt_data : pandas.DataFrame
+        Ground truth, columns: [timestamp, x, y, theta, floor]
+    df_est : pandas.DataFrame
+        Estimated position, columns: [timestamp, x, y, floor, ...]
+    mode_CS : {'RCS', 'ACS'}
         set x-y Coordinate System 'yaw-Relative' or 'Absolute'
 
-    Retruns
+    Returns
     ----------
-    df_ca_tl : pd.DataFrame [timestamp, type, value]
-        evaluation results of timeline ca. type = 'ca_x' and 'ca_y'
+    df_ca_tl : pandas.DataFrame
+        Error at each timestamp, columns: [timestamp, type, value]
+        type: 'ca_x', 'ca_y'
     """
     df_eval = calc_xy_errors(df_est, df_gt_data, mode_CS)
 

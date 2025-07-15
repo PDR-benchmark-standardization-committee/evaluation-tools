@@ -16,8 +16,31 @@ debug = False
 
 def evaluate_RPA_tl(est1, est2, gt1, gt2, id1=1, id2=2, expose_raw=False):
     """
-    RelativePoseAccuracy
-    2軌跡同士の相対極座標誤差
+    Calculate Relative-Pose-Accuracy Error
+
+    Computes the relative polar coordinate error between two estimated trajectories,
+    compared to the corresponding ground-truth relative polar coordinates.
+
+    Parameters
+    ----------
+    est1 : pandas.DataFrame
+        Estimated trajectory1, columns, [timestamp, x, y, (z,) yaw] or [timestamp, x, y, (z,) qx, qy, qz, qw]
+    est2 : pandas.DataFrame
+        Estimated trajectory2, columns, [timestamp, x, y, (z,) yaw] or [timestamp, x, y, (z,) qx, qy, qz, qw]
+    gt1 : pandas.DataFrame
+        Ground-truth trajectory corresponding to `est1`, columns, [timestamp, x, y, (z,) yaw] or [timestamp, x, y, (z,) qx, qy, qz, qw]
+    gt2 : pandas.DataFrame
+        Ground-truth trajectory corresponding to `est2`, columns, [timestamp, x, y, (z,) yaw] or [timestamp, x, y, (z,) qx, qy, qz, qw]
+    id1 : String
+        A label used to distinguish RPA values computed from the relative coordinates of est1 and est2.
+    id2 : String
+        A label used to distinguish RPA values computed from the relative coordinates of est1 and est2.
+
+    Returns
+    -------
+    result: pandas.DataFrame
+        Error at each timestamp, columns: [timestamp, type, value]
+        type : [rpa_{id1}{id2}, rpa_{id2}{id1}]
     """
     est1 = convert_quot_to_yaw(est1)
     est2 = convert_quot_to_yaw(est2)

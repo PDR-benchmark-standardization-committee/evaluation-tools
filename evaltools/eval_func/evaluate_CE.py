@@ -13,17 +13,17 @@ def eval_CE_tl(df_gt_data, df_est, right_on=False):
 
     Parameters
     ----------
-    df_gt_data  : pandas.DataFrame [timestamp, x, y, theta, floor]
-        ground truth
-    df_est      : pandas.DataFrame [timestamp, x, y, floor, ...]
-        estimated position
+    df_gt_data : pandas.DataFrame
+        Ground truth, columns: [timestamp, x, y, theta, floor]
+    df_est : pandas.DataFrame
+        Estimated position, columns: [timestamp, x, y, floor, ...]
     right_on    : boolean
         False:pd.merge_asof(df_gt, df_est) / True:pd.merge_asof(df_est, df_gt)
 
-    Retruns
-    ----------
-    df_error_distance_tl : pandas.DataFrame [timestamp, type, ce]
-        timeline ce = distance error
+    Returns
+    -------
+    result: pandas.DataFrame
+        Error at each timestamp, columns: [timestamp, type, value]
     """
     type_tag = 'ce'
 

@@ -34,8 +34,8 @@ def eval_OE_tl(df_est, obstacle, bitmap_scale=0.01, O=(0, 0), debug_output='./')
 
     Parameters
     ----------
-    df_est : pandas.DataFrame [timestamp, x, y, floor, ...]
-        estimated position
+    df_est : pandas.DataFrame
+        Estimated position, columns: [timestamp, x, y, floor, ...]
     obstacle : bitmap
         0 : movable, 1 : obstacle
     bitmap_scale : float
@@ -43,8 +43,9 @@ def eval_OE_tl(df_est, obstacle, bitmap_scale=0.01, O=(0, 0), debug_output='./')
 
     Returns
     ----------
-    df_oe_tl : pandas.DataFrame [timestamp, type, oe]
-        oe = True (in obstacle) or False (out obstacle) with timeline
+    result : pandas.DataFrame
+        Error at each timestamp, columns: [timestamp, type, value]
+        value: True (in obstacle) or False (out obstacle)
     """
     obstacle = np.logical_not(np.transpose(obstacle))
     # print(len(obstacle[0]), len(obstacle))

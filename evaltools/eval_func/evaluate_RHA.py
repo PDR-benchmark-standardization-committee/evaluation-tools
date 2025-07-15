@@ -15,8 +15,29 @@ debug = False
 
 def evaluate_RHA_tl(est1, est2, gt1, gt2, setname=''):
     """
-    RelativeHeadingAccuracy
-    2軌跡間の時刻毎方位角差とその正解軌跡間の時刻毎方位角差の誤差
+    Calculate Relative-Heading-Accuracy Error
+
+    Computes the per-timestamp heading angle differences between two trajectories,
+    and the error relative to the corresponding ground-truth heading angle differences.
+
+    Parameters
+    ----------
+    est1 : pandas.DataFrame
+        Estimated trajectory1, columns, [timestamp, x, y, (z,) yaw] or [timestamp, x, y, (z,) qx, qy, qz, qw]
+    est2 : pandas.DataFrame
+        Estimated trajectory2, columns, [timestamp, x, y, (z,) yaw] or [timestamp, x, y, (z,) qx, qy, qz, qw]
+    gt1 : pandas.DataFrame
+        Ground-truth trajectory corresponding to `est1`, columns, [timestamp, x, y, (z,) yaw] or [timestamp, x, y, (z,) qx, qy, qz, qw]
+    gt2 : pandas.DataFrame
+        Ground-truth trajectory corresponding to `est2`, columns, [timestamp, x, y, (z,) yaw] or [timestamp, x, y, (z,) qx, qy, qz, qw]
+    setname : String
+        Tag used to separate results by type.
+        Deprecated: use an additional column to distinguish result types instead.
+
+    Returns
+    -------
+    result: pandas.DataFrame
+        Error at each timestamp, columns: [timestamp, type, value]
     """
     # check yaw
     est1 = convert_quot_to_yaw(est1)
