@@ -37,7 +37,7 @@ def evaluate_RDA_tl(est1, est2, gt1, gt2, setname=''):
     result: pandas.DataFrame
         Error at each timestamp, columns: [timestamp, type, value]
     """
-    # 時刻同期
+    # Time synchronization
     df1 = pd.merge_asof(est1, gt1, on='timestamp', tolerance=0.1,
                         direction='nearest', suffixes=['_est1', '_gt1'])
     df2 = pd.merge_asof(est2, gt2, on='timestamp', tolerance=0.1,

@@ -11,8 +11,8 @@ from evaltools.com_tools.frfw_tools import *
 
 def main(eval_middle_filename_ble):
     """
-    BLE評価結果の出力
-    BLEビーコン位置推定系のみ対応
+    Output BLE evaluation results.
+    Only applicable to BLE beacon positioning systems.
 
     Parameters
     ----------

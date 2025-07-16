@@ -40,8 +40,7 @@ def eval_FE_tl(df_gt_data, df_est):
 
 def eval_FE(df_est, step):
     """
-    Calc CE
-    (評価値まで算出する版。主に最適化用の入口)
+    Entry point for integrated localization in step format
     """
     if 'gt' not in step.keys():
         raise KeyError(F'[gt.data] is not found')

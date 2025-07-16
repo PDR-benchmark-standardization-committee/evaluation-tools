@@ -28,12 +28,13 @@ DEBUG = False
 
 def main_with_dp3(est_dir, gt_dir, evaluation_setting=None):
     """
-    指定ディレクトリ内の軌跡に対して全組み合わせの相対評価を行う。
-    est - gt間が何かしら名前で紐づけられている必要あり。
-    現状はxDR_challenge_2024の命名規則を想定する。 ex) {dataset}_{id}.csv
+    Perform relative evaluation for all combinations of trajectories in the specified directory.
+
+    Each pair of Estimated and Ground-truth trajectories must be linked by a common identifier in their filenames.
+    Currently, it assumes the naming convention used in xDR_Challenge_2024 (e.g., {dataset}_{id}.csv).
     """
     if evaluation_setting is None:
-        # 無ければdefault
+        # Use default if not provided
         evaluation_setting = F'{parent_dir}{os.sep}evaluation_setting_rel.json'
     est_filenames = glob.glob(est_dir + '*.csv')
     comb_set = itertools.combinations(est_filenames, 2)
@@ -68,7 +69,8 @@ def main_with_comb_table(est1_dir, est2_dir, gt1_dir, gt2_dir, combination_table
     gt2_dir : String
         Ground-truth trajectory dirname2
     combination_table : String
-        Filename of the table listing est-gt combinations
+        Filename of the table listing est-gt combinations,
+        columns: [est1, gt1, tag1, est2, gt2, tag2, section, data_name, rel_target]
     output_result : String
         Output directory name
     evaluation_setting : String
@@ -80,16 +82,16 @@ def main_with_comb_table(est1_dir, est2_dir, gt1_dir, gt2_dir, combination_table
         Intermediate file of relative evaluation results (per timestamp),
         collumns : [timestamp, type, value, section, data_name, rel_target]
     """
-    # mode=aの為,古いファイルを明示的に削除
+    # Explicitly delete old file because mode='a'
     if os.path.exists(F'{output_result}'):
         os.remove(F'{output_result}')
 
     if evaluation_setting is None:
-        # 無ければdefault
+        # Use default if not provided
         evaluation_setting = F'{parent_dir}/evaluation_setting_rel.json'
         print(F'load {evaluation_setting}')
 
-    # 組み合わせの生成
+    # Load combination_table
     comb_set = pd.read_csv(combination_table, header=0,
                            dtype={'data_name': str})
     comb_set.fillna("", inplace=True)
@@ -123,7 +125,6 @@ def main_with_comb_table(est1_dir, est2_dir, gt1_dir, gt2_dir, combination_table
             print(
                 f'Error on {data_name}, section {section}, target {rel_target}')
             print(e)
-            # エラー内容と対象ファイル名などを記録
             error_info = {
                 'data_name': data_name,
                 'section': section,
@@ -142,7 +143,7 @@ def main_with_comb_table(est1_dir, est2_dir, gt1_dir, gt2_dir, combination_table
         else:
             result_overall = pd.concat([result_overall, result])
 
-        # OOM対策
+        # OOM prevention
         if section == "section1":
             result_overall.to_csv(F'{output_result}', mode='a', header=header)
             del result_overall
@@ -161,11 +162,23 @@ def main_with_comb_table(est1_dir, est2_dir, gt1_dir, gt2_dir, combination_table
 
 def add_colums(result, section, data_name, rel_target):
     """
-    xDR_Challenge_2025用の追加のカラム情報を中間ファイルに入れる
+    Add extra columns for xDR_Challenge_2025 to the intermediate file
 
-    section     : 目的地区間 (内部用)
-    data_name   : データセット名
-    rel_target  : 目的地タイプ(exhibit, robot)
+    section     : Target section (for internal validation)
+    data_name   : Dataset name
+    rel_target  : Destination type (exhibit, robot)
+
+    Parameters
+    ----------
+    result : pandas.DataFrame
+        Middle data of evaluation results, columns: [timestamp, type, value]
+    data_name : String
+        dataset name 
+
+    Returns
+    -------
+    result : pandas.DataFrame
+        Middle data of evaluation results, columns: [timestamp, type, value]
     """
     section_list = np.full(len(result), section)
     data_name_list = np.full(len(result), data_name)
@@ -182,28 +195,35 @@ def main(est_filename1, est_filename2, gt_filename1, gt_filename2, evaluation_se
     """
     Parameters
     ----------
-    est_filename : str
-        estimated trajectory filename. (.csv)
-        Format : [timestamp, x, y, yaw, floor]
-    gt_filename : str
-        ground-truth trajectory filename. (.csv)
-        Format : [timestamp, x, y, yaw, floor]
-    evaluation_setting : str
-        evaluation setting filename. (.json)
-        Format : {eval_name:[bool, param_list], ...}
+    est_filename1 : String
+        Estimated trajectory filename1 (.csv), columns: [timestamp, x, y, yaw, floor]
+    est_filename2 : String
+        Estimated trajectory filename2 (.csv), columns: [timestamp, x, y, yaw, floor]
+    gt_filename1 : String
+        Ground-Truth trajectory filename1 (.csv), columns: [timestamp, x, y, yaw, floor]
+    gt_filename2 : String
+        Ground-Truth trajectory filename2 (.csv), columns: [timestamp, x, y, yaw, floor]
+    evaluation_setting : String
+        Evaluation setting filename (.json), format: {eval_name:[bool, param_list], ...}
+    id1 : String
+        ID to distinguish between vector directions (AB vs. BA)
+    id2 : String
+        ID to distinguish between vector directions (AB vs. BA)
 
     Retruns
     ----------
-    df_evaluation_results_tl : pd.DataFrame
-        middle data of evaluation results
+    df_evaluation_results_tl : pandas.DataFrame
+        Middle data of evaluation results, columns: [timestamp, type, value, section, data_name, rel_target]
+        type: Type of evaluation, {RHA, RDA, RPA}
+        value: Error at each timestamp
     """
-    # load data
+    # Load data
     df_est1 = load_csv(est_filename1)
     df_est2 = load_csv(est_filename2)
     df_gt1 = load_csv(gt_filename1)
     df_gt2 = load_csv(gt_filename2)
     if evaluation_setting is None:
-        # 無ければdefault
+        # Use default if not provided
         evaluation_setting = F'{parent_dir}{os.sep}evaluation_setting_rel.json'
     evaluation_dict = load_json(evaluation_setting)
 
@@ -215,7 +235,7 @@ def main(est_filename1, est_filename2, gt_filename1, gt_filename2, evaluation_se
     if DEBUG:
         plot_traj_with_yaw(df_est1, df_gt1, F'datas/debug/{id1}_{id2}')
 
-    # evaluate timeline
+    # Do evaluation per timestamp
     eh = EvaluationHub(evaluation_dict)
     df_tl = None
     for eval_name, val in eh.eval_list.items():

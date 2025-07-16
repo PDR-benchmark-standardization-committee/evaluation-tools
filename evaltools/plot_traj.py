@@ -63,7 +63,6 @@ def transform_opencv(x, y, mapY_len, O_map=(0, 0)):
 
 
 def color_select(color_idx, title_txt):
-    # 個別対応
     if title_txt == "traj_1":
         if color_idx in [0, 1, 2]:
             clr = 'red'

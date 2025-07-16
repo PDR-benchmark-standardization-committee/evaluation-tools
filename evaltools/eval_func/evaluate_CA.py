@@ -126,8 +126,7 @@ def calc_yaw_from_xy(df_est):
 # ----------------------------------------------------------------------
 def eval_CA(df_est, step, mode_CS='RCS', mode_density='kde'):
     """
-    Calc CA
-    (評価値まで算出する版。主に最適化用の入口)
+    Entry point for integrated localization in step format
     """
     if 'gt' not in step.keys():
         raise KeyError(F'[gt.data] is not found')
@@ -238,7 +237,8 @@ def calc_2D_histgram_mod(x_error_list, y_error_list):
 
 def calc_2dhist_mod(x_error_list, y_error_list):
     """
-    位置誤差のx成分・y成分毎に分布を生成しその平均値と原点(=GT)との距離を評価値として返す。
+    Generate distributions of the position error in the x and y components separately,  
+    compute the mean of each distribution, and return the distance from the origin (== Ground-truth) as the evaluation value.
     """
     xmax = max(np.abs(x_error_list))
     ymax = max(np.abs(y_error_list))

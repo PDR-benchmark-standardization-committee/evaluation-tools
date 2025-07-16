@@ -15,7 +15,7 @@ def main(eval_middle_filenames, type_tag, output_dir, suffix, sections_filename=
     df_m = pd.concat([load_csv(filename)
                      for filename in eval_middle_filenames], ignore_index=True)
 
-    # 時刻区間の指定
+    # Set timerange
     if sections_filename is None:
         time_intervals = [[df_m.index.min(), df_m.index.max()]]
     else:
@@ -23,7 +23,7 @@ def main(eval_middle_filenames, type_tag, output_dir, suffix, sections_filename=
         if len(time_intervals) < 1:
             time_intervals = [[df_m.index.min(), df_m.index.max()]]
 
-    # メイン
+    # Concatenate target data
     df_overall = pd.DataFrame()
     for interval in time_intervals:
         s, e = interval
@@ -34,7 +34,7 @@ def main(eval_middle_filenames, type_tag, output_dir, suffix, sections_filename=
     df_overall.sort_index(inplace=True)
 
     if len(type_tag) < 1:
-        # 未指定なら全て描画する
+        # Draw all if not specified
         tag_list = np.unique(df_m_interval.type.values)
     else:
         tag_list = type_tag

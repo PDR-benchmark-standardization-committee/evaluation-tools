@@ -17,9 +17,9 @@ def load_bitmap_to_ndarray(filename):
 
 
 def save_bitmap_from_ndarray(ndarray, filename):
-    # 2次元ndarrayを0-255の範囲にスケーリング
+    # Scale 2D ndarray to the range [0, 255]
     scaled_array = (ndarray * 255).astype(np.uint8)
-    # PIL Imageオブジェクトに変換
+    # Convert a 2D ndarray to a PIL Image object
     image = Image.fromarray(scaled_array)
-    # 保存
+    # save
     image.save(filename)

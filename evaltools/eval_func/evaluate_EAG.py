@@ -77,7 +77,7 @@ def calc_T_EAG(df_gt_data, df_est, ALIP_timerange=[], is_realtime=False, verbose
     df_gt_data['delta_ts'] = df_gt_data.index
     mid = ALIP_start + (ALIP_end - ALIP_start) / 2
 
-    # ALIP timerangeを適用
+    # Restrict data to the ALIP timerange
     if is_realtime:
         df_gt_data['delta_ts'] -= ALIP_start
     else:
@@ -260,7 +260,7 @@ def calc_A_EAG(df_gt_data, df_est, ALIP_timerange=[], draw_flg=False, output_pat
 
 def eval_EAG(df_est, step):
     """
-    統合測位用の(step形式の)呼び出し口
+    Entry point for integrated localization in step format
     """
     if 'gt' not in step.keys():
         raise KeyError(F'[gt.data] is not found')

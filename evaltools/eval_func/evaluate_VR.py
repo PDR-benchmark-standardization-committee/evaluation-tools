@@ -9,7 +9,7 @@ import numpy as np
 
 def eval_vr(pfloc, method='Median'):
     """
-    速度ベクトル角変化量
+    Error evaluation of the velocity vector angular change
     """
     V0 = pfloc[['x', 'y']].iloc[0:-2].values
     V1 = pfloc[['x', 'y']].iloc[1:-1].values

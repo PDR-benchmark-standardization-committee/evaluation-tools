@@ -105,7 +105,7 @@ def calc_velocity_from_xy2(df_est, x_column='x', y_column='y', window_time=0.5):
 
 def eval_VE(df_est, step=None, valid_vel=1.5):
     """
-    統合測位用の(step形式の)呼び出し口
+    Entry point for integrated localization in step format
     """
     if step is not None:
         if 'gt' not in step.keys():

@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 from setuptools import find_packages, setup
 
-# requirements.txtから依存関係を読み込む関数
-
 
 def load_requirements(filename='requirements.txt'):
+    """
+    Load dependencies from a requirements.txt file.
+    """
     with open(filename, 'r') as f:
         return f.read().splitlines()
 

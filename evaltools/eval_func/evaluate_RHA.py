@@ -45,7 +45,7 @@ def evaluate_RHA_tl(est1, est2, gt1, gt2, setname=''):
     gt1 = convert_quot_to_yaw(gt1)
     gt2 = convert_quot_to_yaw(gt2)
 
-    # 時刻同期
+    # Time synchronization
     df1 = pd.merge_asof(est1, gt1, on='timestamp', tolerance=0.1,
                         direction='nearest', suffixes=['_est1', '_gt1'])
     df2 = pd.merge_asof(est2, gt2, on='timestamp', tolerance=0.1,
@@ -78,7 +78,7 @@ def evaluate_RHA_tl(est1, est2, gt1, gt2, setname=''):
 
 def scale_rad(rad):
     """
-    -pi < θ <= pi へスケーリング
+     Scale angle to the range (-π, π]
     """
     if -1*np.pi < rad <= np.pi:
         return rad

@@ -35,12 +35,12 @@ def main(eval_middle_filenames, sections_filename):
     Outputs
     -------
     result.json: json
-        Evaluation Result
+        Dictionary storing evaluation results by key metrics
     """
     df_m = pd.concat([load_csv(filename)
                      for filename in eval_middle_filenames], ignore_index=True)
 
-    # 時刻区間の指定
+    # Set timerange
     if sections_filename is None:
         time_intervals = [[df_m.index.min(), df_m.index.max()]]
     else:
@@ -68,8 +68,8 @@ def main(eval_middle_filenames, sections_filename):
 
         result_dict[F'{type_tag}'] = res
 
-    # xDR_Challenge_2025用
-    # rpa_12, rpa_21 --> rpa_exhibit, rpa_robot 等で区別する
+    # For xDR_Challenge_2025
+    # Change grouping rpa_12, rpa_21 --> rpa_exhibit, rpa_robot
     if 'rel_target' in df_overall.columns:
         for type_tag in ['rda', 'rpa']:
             mask = df_overall['type'].str.contains(type_tag, na=False)
@@ -115,7 +115,20 @@ def get_evalresult_boolean(df_type):
 
 def calc_Competition_Score(result_dict, weights_table=None, output_dir='./'):
     """
-    xDR_Challenge_2025 Competitionの最終スコア計算
+    Calculate overall evaluation score for the xDR_Challenge_2025 competition
+
+    Parameters
+    ----------
+    result_dict : Dictionary
+    weights_table : Dictionary
+        Score weights
+    output_dir : String
+        Output directory name
+
+    Returns
+    -------
+    result_dict : Dictionary
+        Dictionary storing evaluation results by key metrics
     """
     if weights_table is None:
         weights_table = WEIGHTS
@@ -146,7 +159,6 @@ def plot_Score_bar(result, weights_table, output_dir='./'):
             values.append(value['per95'])
             values_weighted.append(value['per95'] * weights_table[key])
 
-    # 描画
     fig, ax = plt.subplots(1, 2, figsize=(12, 8))
 
     TotalScore = result['Score']

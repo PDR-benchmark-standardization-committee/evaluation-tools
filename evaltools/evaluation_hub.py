@@ -18,10 +18,12 @@ class EvaluationHub():
 
     def do_evaluation(self, step, pfloc=None, pfloc_pdr=None):
         """
-        self.eval_list 内の評価を順番に実行する。
-        評価対象の軌跡は基本的にstep['pfloc']だがpfloc引数に明示されている場合はそちらを対象とする。
+        Sequentially execute the evaluations listed in self.eval_list.
 
-        *pfloc_pdr : EAG評価を行う際の絶対位置補正を行わない測位結果
+        By default, the target trajectory for evaluation is step['pfloc'],  
+        but if the `pfloc` argument is explicitly specified, it takes precedence.
+
+        *pfoc_pdr : Positioning result without absolute correction, used specifically for EAG evaluation.
         """
         pfloc = step['pfloc'].copy(
             deep=True) if pfloc is None else pfloc.copy(deep=True)
@@ -36,7 +38,7 @@ class EvaluationHub():
                     if eval_name == 'EAG':
                         if pfloc_pdr is None:
                             self.eval_results[floor][eval_name] = None
-                            continue  # 実行不可
+                            continue
                         pfloc = pfloc_pdr.copy(deep=True)
                     elif eval_name == 'OE':
                         value[1][0] += F'/{floor}_0.01_0.01.bmp'
@@ -80,12 +82,12 @@ class EvaluationHub():
             elif eval_name == 'VR':
                 result = evt.eval_vr(pfloc, method=params_eval[0])
 
-            # floor毎結果の格納
+            # Store results for each floor
             if eval_name not in self.eval_results[floor].keys():
                 self.eval_results[floor][eval_name] = result
             else:
                 self.eval_results[floor][eval_name] += result
-            # floor区別なし結果の格納
+            # Store results without floor distinction
             if eval_name not in self.eval_results['overall'].keys():
                 self.eval_results['overall'][eval_name] = result
             else:
@@ -134,6 +136,20 @@ class EvaluationHub():
         return result
 
     def eval_switcher_simple(self, eval_name, est, gt, params_eval=[]):
+        """
+        Execute the specified absolute localization evaluation function
+
+        Parameters
+        ----------
+        eval_name : String
+            Evaluation function name
+        est : pandas.DataFrame
+            Estimated trajectory1, columns, [timestamp, x, y, (z,)]
+        gt : pandas.DataFrame
+            Ground-truth trajectory corresponding to `est1`, columns, [timestamp, x, y, (z,)]
+        params_eval : List
+            Parameters provided to each evaluation function
+        """
         result = None
 
         try:
@@ -175,6 +191,31 @@ class EvaluationHub():
         return result
 
     def eval_switcher_simple_rel(self, eval_name, id1, id2, est1, est2, gt1, gt2, params_eval=[], setname=''):
+        """
+        Execute the specified relative evaluation function
+
+        Parameters
+        ----------
+        eval_name : String
+            Evaluation function name
+        id1 : String
+            ID to distinguish between vector directions (AB vs. BA) 
+        id2 : String
+            ID to distinguish between vector directions (AB vs. BA)
+        est1 : pandas.DataFrame
+            Estimated trajectory1, columns, [timestamp, x, y, (z,) yaw] or [timestamp, x, y, (z,) qx, qy, qz, qw]
+        est2 : pandas.DataFrame
+            Estimated trajectory2, columns, [timestamp, x, y, (z,) yaw] or [timestamp, x, y, (z,) qx, qy, qz, qw]
+        gt1 : pandas.DataFrame
+            Ground-truth trajectory corresponding to `est1`, columns, [timestamp, x, y, (z,) yaw] or [timestamp, x, y, (z,) qx, qy, qz, qw]
+        gt2 : pandas.DataFrame
+            Ground-truth trajectory corresponding to `est2`, columns, [timestamp, x, y, (z,) yaw] or [timestamp, x, y, (z,) qx, qy, qz, qw]
+
+        Returns
+        -------
+        result: pandas.DataFrame
+            Error at each timestamp, columns: [timestamp, type, value]
+        """
         result = None
 
         try:
@@ -193,7 +234,6 @@ class EvaluationHub():
 
 def main(pfloc, step, params_eval):
     """
-    評価関数の統一された入口
     """
 
     pass

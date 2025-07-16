@@ -371,7 +371,7 @@ def check_error(df_est, obstacle, obstacle_cordinate_count, output_path='./outpu
     ax.scatter(df_est['x_block_num'][mask_1].values, df_est['y_block_num']
                [mask_1].values, s=1, color='red', label='in obstacle')
 
-    # 対象の位置インデックス（iloc用）
+    # Target position index (for iloc)
     target_pos = df_est.index.get_indexer_for(df_est[mask_1].index)
 
     for i in target_pos:
@@ -384,7 +384,7 @@ def check_error(df_est, obstacle, obstacle_cordinate_count, output_path='./outpu
     x_ticks = ax.get_xticks()
     y_ticks = ax.get_yticks()
     ax.set_xticklabels(x_ticks/100)
-    ax.set_yticklabels(y_ticks/100)  # cm -> mスケールへ変換
+    ax.set_yticklabels(y_ticks/100)  # Convert scale from cm to m
     ax.set_xlabel('(m)')
     ax.set_ylabel('(m)')
     ax.legend()
@@ -397,7 +397,7 @@ def check_error(df_est, obstacle, obstacle_cordinate_count, output_path='./outpu
 
 def gen_runtime_OE(step, floor, bitmap_path=None):
     """
-    obstacle 評価関数を実行するのに必要なデータの生成
+    Generate data required to run the obstacle evaluation function
     """
     if 'occupancy_grids' in step['gis'].keys():
         bitmap = step['gis']['occupancy_grids']['grids_dict'][floor]

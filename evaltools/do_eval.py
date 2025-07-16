@@ -20,16 +20,21 @@ parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
 def main_with_dir(est_dir, gt_dir, combination_table, output_result="evaluation_result.csv", evaluation_setting=None):
     """
     xDR Challenge 2025
+
+    Parameters
+    ----------
+    combination_table : String
+        Filename of the table listing est-gt combinations
     """
-    # mode=aの為,古いファイルを明示的に削除
+    # Explicitly delete old file because mode='a'
     if os.path.exists(F'{output_result}'):
         os.remove(F'{output_result}')
 
     if evaluation_setting is None:
-        # 無ければdefault
+        # Use default if not provided
         evaluation_setting = F'{parent_dir}{os.sep}evaluation_setting.json'
 
-    # 組み合わせの取得
+    # Load combination_table
     comb_set = pd.read_csv(combination_table, header=0,
                            dtype={'data_name': str})
     comb_set.fillna("", inplace=True)
@@ -57,7 +62,6 @@ def main_with_dir(est_dir, gt_dir, combination_table, output_result="evaluation_
         except Exception as e:
             print(f'Error on {data_name}')
             print(e)
-            # エラー内容と対象ファイル名などを記録
             error_info = {
                 'data_name': data_name,
                 'est_filename1': est_filename1,
@@ -72,7 +76,7 @@ def main_with_dir(est_dir, gt_dir, combination_table, output_result="evaluation_
         else:
             result_overall = pd.concat([result_overall, result])
 
-        # OOM対策
+        # OOM prevention
         if counter_oom % 5 == 0:
             result_overall.to_csv(F'{output_result}', mode='a', header=header)
             del result_overall
@@ -93,9 +97,19 @@ def main_with_dir(est_dir, gt_dir, combination_table, output_result="evaluation_
 
 def add_colums(result, data_name):
     """
-    xDR_Challenge_2025用の追加のカラム情報を中間ファイルに入れる
+    Add extra columns for xDR_Challenge_2025 to the intermediate file
 
-    data_name   : データセット名
+    Parameters
+    ----------
+    result : pandas.DataFrame
+        Middle data of evaluation results, columns: [timestamp, type, value]
+    data_name : String
+        dataset name 
+
+    Returns
+    -------
+    result : pandas.DataFrame
+        Middle data of evaluation results, columns: [timestamp, type, value]
     """
     data_name_list = np.full(len(result), data_name)
 
@@ -106,7 +120,12 @@ def add_colums(result, data_name):
 
 def check_combination_dup(comb_set):
     """
-    combination tableの組み合わせ重複を排除
+    Remove duplicate combinations from the combination table
+
+    Parameters
+    ----------
+    comb_set : pandas.DataFrame
+        combination_table, columns: [est1, gt1, tag1, est2, gt2, tag2, section, data_name, rel_target]
     """
     new_comb = comb_set[["est1", "gt1", "data_name"]]
     new_comb_set = new_comb.drop_duplicates(subset=["est1", "gt1"])
@@ -137,7 +156,7 @@ def main(est_filename, gt_filename, evaluation_setting=None):
         value: Error at each timestamp
     """
     if evaluation_setting is None:
-        # 無ければdefault
+        # Use default if not provided
         evaluation_setting = F'{parent_dir}{os.sep}evaluation_setting.json'
 
     # load data
@@ -146,7 +165,7 @@ def main(est_filename, gt_filename, evaluation_setting=None):
 
     evaluation_dict = load_json(evaluation_setting)
 
-    # evaluate timeline
+    # Do evaluation per timestamp
     eh = EvaluationHub(evaluation_dict)
     df_tl = None
     for eval_name, val in eh.eval_list.items():

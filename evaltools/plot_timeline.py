@@ -12,9 +12,10 @@ from evaltools.com_tools.frfw_tools import *
 
 
 def main(eval_middle_filenames, type_tag, output_dir, suffix, sections_filename=None):
-    df_m = pd.concat([load_csv(filename) for filename in eval_middle_filenames], ignore_index=True)
+    df_m = pd.concat([load_csv(filename)
+                     for filename in eval_middle_filenames], ignore_index=True)
 
-    # 時刻区間の指定
+    # Set timerange
     if sections_filename is None:
         time_intervals = [[df_m.index.min(), df_m.index.max()]]
     else:
@@ -22,7 +23,7 @@ def main(eval_middle_filenames, type_tag, output_dir, suffix, sections_filename=
         if len(time_intervals) < 1:
             time_intervals = [[df_m.index.min(), df_m.index.max()]]
 
-    # メイン
+    # # Concatenate target data
     df_overall = pd.DataFrame()
     for interval in time_intervals:
         s, e = interval
@@ -33,7 +34,7 @@ def main(eval_middle_filenames, type_tag, output_dir, suffix, sections_filename=
     df_overall.sort_index(inplace=True)
 
     if len(type_tag) < 1:
-        # 未指定なら全て描画する
+        # Draw all if not specified
         tag_list = np.unique(df_m_interval.type.values)
     else:
         tag_list = type_tag
@@ -41,7 +42,8 @@ def main(eval_middle_filenames, type_tag, output_dir, suffix, sections_filename=
     for tagname in tag_list:
         df_target = df_overall[df_overall.type == tagname]
 
-        plt.plot(df_target.index.to_numpy(), df_target["value"].to_numpy().astype(float))
+        plt.plot(df_target.index.to_numpy(),
+                 df_target["value"].to_numpy().astype(float))
         plt.savefig(F'{output_dir}/timeline_{type_tag}{suffix}.png')  # .eps
         plt.close()
 
@@ -49,7 +51,8 @@ def main(eval_middle_filenames, type_tag, output_dir, suffix, sections_filename=
 def main_cl():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-eval_middle_files', '-m', nargs='+', help="List of CSV files to evaluate")
+    parser.add_argument('-eval_middle_files', '-m', nargs='+',
+                        help="List of CSV files to evaluate")
     parser.add_argument('-type_tag', '-t', nargs='*', default=[])
 
     parser.add_argument('-sections_filename', '-s')
@@ -58,7 +61,9 @@ def main_cl():
 
     args = parser.parse_args()
 
-    main(args.eval_middle_files, args.type_tag, args.output_dir, args.suffix, args.sections_filename)
+    main(args.eval_middle_files, args.type_tag,
+         args.output_dir, args.suffix, args.sections_filename)
+
 
 if __name__ == '__main__':
     main_cl()
