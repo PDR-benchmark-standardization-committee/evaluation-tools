@@ -33,6 +33,7 @@ def main_with_dir(est_dir, gt_dir, combination_table, output_result="evaluation_
     if evaluation_setting is None:
         # Use default if not provided
         evaluation_setting = F'{parent_dir}{os.sep}evaluation_setting.json'
+        evaluation_setting = load_json(evaluation_setting)
 
     # Load combination_table
     comb_set = pd.read_csv(combination_table, header=0,
@@ -54,6 +55,14 @@ def main_with_dir(est_dir, gt_dir, combination_table, output_result="evaluation_
         est_filename1 += row.est1 if '.csv' in row.est1 else row.est1 + '.csv'
         gt_filename1 = F'{gt_dir}'
         gt_filename1 += row.gt1 if '.csv' in row.gt1 else row.gt1 + '.csv'
+
+        # handle xDR-Challenge-2025 ALIP
+        if evaluation_setting['EAG'][0]:
+            eag_setting_dict = evaluation_setting['EAG'][1]
+            if 'ALIP_timerange' in eag_setting_dict.keys() and type(eag_setting_dict['ALIP_timerange']) == str:
+                ALIP_filename = eag_setting_dict['ALIP_timerange'] + \
+                    F'ALIP_{data_name}.csv'
+                evaluation_setting['EAG'][1]['ALIP_timerange'] = ALIP_filename
 
         try:
             print(F'----- {data_name} -----')

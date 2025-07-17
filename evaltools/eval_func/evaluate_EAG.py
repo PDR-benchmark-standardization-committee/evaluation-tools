@@ -31,8 +31,17 @@ def eval_EAG_tl(df_gt_data, df_est, ALIP_timerange=[], mode='T', is_realtime=Fal
     result : pandas.DataFrame
         Error at each timestamp, columns: [timestamp, type, value]
     """
+    # Set ALIP timerange
     if type(ALIP_timerange) == str:
         df_ALIP = pd.read_csv(ALIP_timerange, header=0)
+    elif len(ALIP_timerange) < 1:
+        df_ALIP = pd.DataFrame(
+            [[df_gt_data.index[0], df_gt_data.index[-1]]], columns=["ts_start", "ts_end"])
+    elif is_2d_array(ALIP_timerange):
+        df_ALIP = pd.DataFrame(ALIP_timerange, columns=["ts_start", "ts_end"])
+    else:
+        df_ALIP = pd.DataFrame([ALIP_timerange], columns=[
+                               "ts_start", "ts_end"])
 
     df_eag_tl = None
     for _, row in df_ALIP.iterrows():
@@ -58,6 +67,14 @@ def eval_EAG_tl(df_gt_data, df_est, ALIP_timerange=[], mode='T', is_realtime=Fal
             print(e)
 
     return df_eag_tl
+
+
+def is_2d_array(lst):
+    try:
+        arr = np.array(lst)
+        return arr.ndim == 2
+    except:
+        return False
 
 
 ###
