@@ -32,7 +32,6 @@ def eval_EAG_tl(df_gt_data, df_est, ALIP_timerange=[], mode='T', is_realtime=Fal
     result : pandas.DataFrame
         Error at each timestamp, columns: [timestamp, type, value]
     """
-    print('!!!!!!!!!!!!!!!!!!!!!!')
     # Set ALIP timerange
     if type(ALIP_timerange) == str:
         df_ALIP = pd.read_csv(ALIP_timerange, header=0)
