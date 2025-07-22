@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import os
 import sys
+import copy
 import argparse
 import gc
 import logging
@@ -58,15 +59,16 @@ def main_with_dir(est_dir, gt_dir, combination_table, output_result="evaluation_
 
         # handle xDR-Challenge-2025 ALIP
         if evaluation_setting['EAG'][0]:
+            evaluation_setting_ind = copy.deepcopy(evaluation_setting)
             eag_setting_dict = evaluation_setting['EAG'][1]
             if 'ALIP_timerange' in eag_setting_dict.keys() and type(eag_setting_dict['ALIP_timerange']) == str:
                 ALIP_filename = eag_setting_dict['ALIP_timerange'] + \
                     F'ALIP_{data_name}.csv'
-                evaluation_setting['EAG'][1]['ALIP_timerange'] = ALIP_filename
+                evaluation_setting_ind['EAG'][1]['ALIP_timerange'] = ALIP_filename
 
         try:
             print(F'----- {data_name} -----')
-            result = main(est_filename1, gt_filename1, evaluation_setting)
+            result = main(est_filename1, gt_filename1, evaluation_setting_ind)
             result = add_colums(result, data_name)
         except Exception as e:
             print(f'Error on {data_name}')
