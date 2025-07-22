@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation
+from joblib import Parallel, delayed
 
 
 def eval_EAG_tl(df_gt_data, df_est, ALIP_timerange=[], mode='T', is_realtime=False, verbose=False):
@@ -31,6 +32,7 @@ def eval_EAG_tl(df_gt_data, df_est, ALIP_timerange=[], mode='T', is_realtime=Fal
     result : pandas.DataFrame
         Error at each timestamp, columns: [timestamp, type, value]
     """
+    print('!!!!!!!!!!!!!!!!!!!!!!')
     # Set ALIP timerange
     if type(ALIP_timerange) == str:
         df_ALIP = pd.read_csv(ALIP_timerange, header=0)
@@ -43,30 +45,33 @@ def eval_EAG_tl(df_gt_data, df_est, ALIP_timerange=[], mode='T', is_realtime=Fal
         df_ALIP = pd.DataFrame([ALIP_timerange], columns=[
                                "ts_start", "ts_end"])
 
-    df_eag_tl = None
-    for _, row in df_ALIP.iterrows():
-        ALIP_timerange = [row.ts_start, row.ts_end]
-        try:
-            if mode == 'T':
-                df_eag_tl_ALIP = calc_T_EAG(
-                    df_gt_data, df_est, ALIP_timerange, is_realtime, verbose)
-            elif mode == 'D':
-                df_eag_tl_ALIP = calc_D_EAG(df_gt_data, df_est, ALIP_timerange)
-            elif mode == 'A':
-                df_eag_tl_ALIP = calc_A_EAG(df_gt_data, df_est, ALIP_timerange)
+    # 並列処理実行
+    result_dfs = Parallel(n_jobs=-1, backend="loky", verbose=10)(
+        delayed(process_row)(df_gt_data, df_est, [
+            row.ts_start, row.ts_end], mode, is_realtime, verbose)
+        for row in df_ALIP.itertuples(index=False)
+    )
 
-            if df_eag_tl is None:
-                df_eag_tl = df_eag_tl_ALIP
-            else:
-                if verbose:
-                    df_eag_tl = [
-                        pd.concat([df_eag_tl[idx], df_eag_tl_ALIP[idx]]) for idx in range(0, 3)]
-                else:
-                    df_eag_tl = pd.concat([df_eag_tl, df_eag_tl_ALIP])
-        except Exception as e:
-            print(e)
+    # 結果結合
+    df_eag_tl = pd.concat(result_dfs, ignore_index=True)
+    df_eag_tl.sort_values("timestamp", inplace=True, ignore_index=True)
 
     return df_eag_tl
+
+
+def process_row(df_gt_data, df_est, ALIP_timerange, mode, is_realtime, verbose):
+    try:
+        if mode == 'T':
+            df_eag_tl_ALIP = calc_T_EAG(
+                df_gt_data, df_est, ALIP_timerange, is_realtime, verbose)
+        elif mode == 'D':
+            df_eag_tl_ALIP = calc_D_EAG(df_gt_data, df_est, ALIP_timerange)
+        elif mode == 'A':
+            df_eag_tl_ALIP = calc_A_EAG(df_gt_data, df_est, ALIP_timerange)
+    except Exception as e:
+        print(e)
+
+    return df_eag_tl_ALIP
 
 
 def is_2d_array(lst):
