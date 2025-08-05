@@ -152,6 +152,8 @@ def main_with_comb_table(est1_dir, est2_dir, gt1_dir, gt2_dir, combination_table
             if header:
                 header = False
 
+    if result_overall is None:
+        return result_overall
     result_overall.to_csv(F'{output_result}', mode='a', header=header)
     if error_rows:
         df_error = pd.DataFrame(error_rows)

@@ -12,6 +12,7 @@ warnings.filterwarnings("ignore")
 
 WEIGHTS = {'ce': 1/6, 'rha': 1/6, 'rda_exhibit': 1/6,
            'rpa_exhibit': 1/6, 'rda_robot': 1/6, 'rpa_robot': 1/6}
+EAG_THR = 1.0
 
 
 def main(eval_middle_filenames, sections_filename):
@@ -64,6 +65,8 @@ def main(eval_middle_filenames, sections_filename):
         if type_tag == 'oe' or type_tag == 'fe':
             res = get_evalresult_boolean(df_type)
         else:
+            df_type = handle_postprocessing_for_each_evaluation(
+                df_type, type_tag)
             res = get_evalresult_traj(df_type)
 
         result_dict[F'{type_tag}'] = res
@@ -91,6 +94,29 @@ def main(eval_middle_filenames, sections_filename):
     return result_dict
 
 
+def handle_postprocessing_for_each_evaluation(df, type_tag):
+    if type_tag == 'eag':
+        def decode_value_eag(row):
+            s_list = row.split(';')
+            s_list = [float(s) for s in s_list]
+            return s_list
+
+        values_series = df['value'].apply(decode_value_eag)
+        values_arr = np.stack(values_series.to_numpy())
+
+        df = df[values_arr[:, 1] >= EAG_THR]
+        values_arr = values_arr[values_arr[:, 1] >= EAG_THR]
+
+        t_eag_arr = values_arr[:, 0]/values_arr[:, 1]
+
+        df['value'] = t_eag_arr
+
+        return df
+
+    else:
+        return df
+
+
 def get_evalresult_traj(df_type):
     df_type['value'] = df_type['value'].astype(float)
 
@@ -108,6 +134,7 @@ def get_evalresult_traj(df_type):
 
 
 def get_evalresult_boolean(df_type):
+    df_type['value'] = df_type['value'].map({'FALSE': 0, 'TRUE': 1})
     df_type['value'] = df_type['value'].astype(float)
     # return len(df_type)/len(df_type[df_type.value == 1])
     return np.sum(df_type.value)/len(df_type)

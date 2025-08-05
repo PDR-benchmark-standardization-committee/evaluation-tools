@@ -40,9 +40,33 @@ def main(eval_middle_filenames, type_tag, output_dir, suffix, sections_filename=
         tag_list = type_tag
 
     for tagname in tag_list:
+        if tagname == 'oe':
+            continue
+
         df_target = df_overall[df_overall.type == tagname]
+        df_target = handle_postprocessing_for_each_evaluation(
+            df_target, tagname)
         make_cdf_graph(df_target.value.astype(
             float), tagname, output_dir, suffix)
+
+
+def handle_postprocessing_for_each_evaluation(df, type_tag):
+    if type_tag == 'eag':
+        def decode_value_eag(row):
+            s_list = row.split(';')
+            s_list = [float(s) for s in s_list]
+            return s_list
+
+        values_series = df['value'].apply(decode_value_eag)
+        values_arr = np.stack(values_series.to_numpy())
+        t_eag_arr = values_arr[:, 0]/values_arr[:, 1]
+
+        df['value'] = t_eag_arr
+
+        return df
+
+    else:
+        return df
 
 
 def ecdf(data):
