@@ -45,6 +45,7 @@ def eval_EAG_tl(df_gt_data, df_est, ALIP_timerange=[], mode='T', is_realtime=Fal
                                "ts_start", "ts_end"])
 
     # 並列処理実行
+    print('calc_EAG')
     result_dfs = Parallel(n_jobs=-1, backend="loky", verbose=10)(
         delayed(process_row)(df_gt_data, df_est, [
             row.ts_start, row.ts_end], mode, is_realtime, verbose)
@@ -52,21 +53,23 @@ def eval_EAG_tl(df_gt_data, df_est, ALIP_timerange=[], mode='T', is_realtime=Fal
     )
 
     # 結果結合
-    df_eag_tl = pd.concat(result_dfs, ignore_index=True)
-    df_eag_tl.sort_values("timestamp", inplace=True, ignore_index=True)
+    df_eag_tl = pd.concat(result_dfs)
+    df_eag_tl.sort_values("timestamp", inplace=True)
 
     return df_eag_tl
 
 
 def process_row(df_gt_data, df_est, ALIP_timerange, mode, is_realtime, verbose):
     try:
-        if mode == 'T':
-            df_eag_tl_ALIP = calc_T_EAG(
-                df_gt_data, df_est, ALIP_timerange, is_realtime, verbose)
-        elif mode == 'D':
-            df_eag_tl_ALIP = calc_D_EAG(df_gt_data, df_est, ALIP_timerange)
-        elif mode == 'A':
-            df_eag_tl_ALIP = calc_A_EAG(df_gt_data, df_est, ALIP_timerange)
+        # if mode == 'T':
+        #     df_eag_tl_ALIP = calc_T_EAG(
+        #         df_gt_data, df_est, ALIP_timerange, is_realtime, verbose)
+        # elif mode == 'D':
+        #     df_eag_tl_ALIP = calc_D_EAG(df_gt_data, df_est, ALIP_timerange)
+        # elif mode == 'A':
+        #     df_eag_tl_ALIP = calc_A_EAG(df_gt_data, df_est, ALIP_timerange)
+        df_eag_tl_ALIP = calc_EAG(
+            df_gt_data, df_est, ALIP_timerange, is_realtime)
     except Exception as e:
         print(e)
 
@@ -140,26 +143,6 @@ def calc_T_EAG(df_gt_data, df_est, ALIP_timerange=[], is_realtime=False, verbose
         return df_eag_tl, error_from_gt, df_eval['delta_ts']
     else:
         return df_eag_tl
-
-    # ### graph
-    # mask = (df_eval_FC['delta_ts'] > 1)
-
-    # fig = plt.figure()
-    # ax1 = fig.add_subplot(2,1,1)
-    # ax1.set_xlabel('elapsed time [s]')
-    # ax1.set_ylabel('error distance form gt [m]')
-    # ax1.scatter(df_eval_FC['delta_ts'], np.hypot(df_eval_FC['x_gt'] - df_eval_FC['x_est'], df_eval_FC['y_gt'] - df_eval_FC['y_est']), s=1)
-
-    # ax2 = fig.add_subplot(2,1,2)
-    # ax2.scatter(df_eval_FC['delta_ts'][mask], df_EAG[mask], s=1)
-    # ax2.set_xlabel('elapsed time [s]')
-    # ax2.set_ylabel('T-EAG [m/s]')
-
-    # p50 = np.full(len(df_eval_FC['delta_ts'][mask]), np.percentile(df_EAG.values, 50))
-
-    # plt.tight_layout()
-    # fig.savefig(output_path + 'T_EAG.png')
-    # plt.close()
 
 ###
 
@@ -277,6 +260,153 @@ def calc_A_EAG(df_gt_data, df_est, ALIP_timerange=[], draw_flg=False, output_pat
         data={'timestamp': df_eval_FC.index, 'type': 'eag', 'value': df_EAG}).set_index('timestamp')
 
     return df_eag_tl
+
+
+def calc_EAG(df_gt_data, df_est, ALIP_timerange=[], is_realtime=False):
+    """
+    Returns
+    -------
+    df_eag_tl : pandas.DataFrame
+        Error at each timestamp, columns: [timestamp, type, value]
+        type : eag
+        value : [error_distance_from_gt];[ALIP_elapsed_time];[ALIP_elapsed_distance];[ALIP_elapsed_angle]
+    """
+    # set timerange
+    if len(ALIP_timerange) < 1:
+        ALIP_timerange = (df_gt_data.index[0], df_gt_data.index[-1])
+    ALIP_start = ALIP_timerange[0]
+    ALIP_end = ALIP_timerange[-1]
+
+    # extract ALIP timerange
+    df_gt_data = df_gt_data[ALIP_start:ALIP_end]
+    df_est = df_est[ALIP_start:ALIP_end]
+
+    df_gt_data = df_gt_data.dropna(subset=("x", "y"))
+    df_est = df_est.dropna(subset=("x", "y"))
+
+    df_gt_data['ts_gt'] = df_gt_data.index
+    df_est['ts_est'] = df_est.index
+
+    # check yaw
+    if "yaw" not in df_gt_data.keys() and "qx" in df_gt_data.keys():
+        df_gt_data["yaw"] = [Rotation.from_quat(q).as_euler(
+            "XYZ")[0] for q in df_gt_data[["qx", "qy", "qz", "qw"]].values]
+    if "yaw" not in df_est.keys() and "qx" in df_est.keys():
+        df_gt_data["yaw"] = [Rotation.from_quat(q).as_euler(
+            "XYZ")[0] for q in df_est[["qx", "qy", "qz", "qw"]].values]
+
+    df_eval = pd.merge_asof(df_gt_data, df_est,
+                            left_index=True, right_index=True, tolerance=0.5, direction='nearest',
+                            suffixes=["_gt", "_est"])
+    df_eval = df_eval.dropna(subset=("x_gt", "y_gt", "x_est", "y_est"))
+
+    # floor check
+    if "floor_est" in df_eval.columns and "floor_gt" in df_eval.columns:
+        df_eval["floor_correct"] = (
+            df_eval["floor_est"] == df_eval["floor_gt"])
+        df_eval = df_eval[df_eval['floor_correct']]
+    df_eval = df_eval[ALIP_start+0.001:ALIP_end-0.001]
+
+    if len(df_eval) < 1:
+        return pd.DataFrame(columns=["timestamp", "type", "value"]).set_index('timestamp')
+
+    #
+    error_from_gt = np.hypot(
+        df_eval['x_gt'] - df_eval['x_est'], df_eval['y_gt'] - df_eval['y_est'])
+    elapsed_time = calc_elapsed_time(
+        df_eval.copy(deep=True), ALIP_start, ALIP_end, is_realtime)
+    elapsed_distance = calc_elapsed_distance(
+        df_eval.copy(deep=True), ALIP_start, ALIP_end)
+    elapsed_angle = calc_elapsed_angle(
+        df_eval.copy(deep=True), ALIP_start, ALIP_end)
+
+    value_arr = combine_arrays_with_semicolon(
+        error_from_gt, elapsed_time, elapsed_distance, elapsed_angle)
+    df_eag_tl = pd.DataFrame(
+        data={'timestamp': df_eval.index, 'type': 'eag', 'value': value_arr}).set_index('timestamp')
+
+    return df_eag_tl
+
+
+def calc_elapsed_time(df_eval, ALIP_start, ALIP_end, is_realtime):
+    """
+    """
+    df_eval['delta_ts'] = df_eval.index
+    mid = ALIP_start + (ALIP_end - ALIP_start) / 2
+
+    # Restrict data to the ALIP timerange
+    if is_realtime:
+        df_eval['delta_ts'] -= ALIP_start
+    else:
+        df_eval.loc[(df_eval.index >= ALIP_start) & (
+            df_eval.index < mid), 'delta_ts'] -= ALIP_start
+        df_eval.loc[(df_eval.index >= mid) & (
+            df_eval.index <= ALIP_end), 'delta_ts'] -= ALIP_end
+        df_eval.loc[(df_eval.index >= mid) & (
+            df_eval.index <= ALIP_end), 'delta_ts'] *= -1
+
+    return df_eval['delta_ts'].values
+
+
+def calc_elapsed_distance(df_eval, ALIP_start, ALIP_end):
+    """
+    """
+    df_eval['x_diff'] = df_eval['x_est'].diff()
+    df_eval['y_diff'] = df_eval['y_est'].diff()
+    # df_eval.drop(index=df_eval.index[0], inplace=True)
+    df_eval.fillna(0, inplace=True)
+    df_eval['dist_diff'] = np.hypot(
+        df_eval['x_diff'], df_eval['y_diff'])
+
+    def calc_Sdistance(row):
+        idx = row['ts_gt']
+
+        dist_s = np.sum(df_eval[ALIP_start:idx]['dist_diff'].values)
+        dist_e = np.sum(df_eval[idx:ALIP_end]['dist_diff'].values)
+
+        return np.min([dist_s, dist_e])
+
+    dist_from_ALIPpoint = df_eval.apply(calc_Sdistance, axis=1)
+    return dist_from_ALIPpoint
+
+
+def calc_elapsed_angle(df_eval, ALIP_start, ALIP_end):
+    """
+    Notes
+    -----
+    If yaw is missing, return an np.array filled with NaNs
+    """
+    if "yaw_gt" not in df_eval.keys() or "yaw_est" not in df_eval.keys():
+        return np.full(len(df_eval), np.nan)
+
+    df_eval['yaw_gt'] = np.abs(df_eval['yaw_gt'].diff())
+    df_eval['yaw_est'] = np.abs(df_eval['yaw_est'].diff())
+    # df_eval.drop(index=df_eval.index[0], inplace=True)
+    df_eval.fillna(0, inplace=True)
+
+    def calc_Srad(row):
+        idx = row['ts_gt']
+        Srad_s = np.sum(df_eval[ALIP_start:idx]['yaw_est'].values)
+        Srad_e = np.sum(df_eval[idx:ALIP_end]['yaw_est'].values)
+
+        return np.min([Srad_s, Srad_e])
+
+    Srad_from_ALIP = df_eval.apply(calc_Srad, axis=1)
+    return Srad_from_ALIP
+
+
+def combine_arrays_with_semicolon(A, B, C, D):
+    A, B, C, D = map(np.asarray, (A, B, C, D))
+    if not (A.shape == B.shape == C.shape == D.shape):
+        print(A, B, C, D)
+        raise ValueError("All input arrays must have the same shape")
+
+    combined = np.char.add(
+        np.char.add(np.char.add(A.astype(str), ';' +
+                    B.astype(str)), ';' + C.astype(str)),
+        ';' + D.astype(str)
+    )
+    return combined
 
 
 def eval_EAG(df_est, step):
