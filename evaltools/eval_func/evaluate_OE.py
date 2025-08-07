@@ -285,7 +285,7 @@ def eval_OE_tl(df_est, obstacle, bitmap_scale=0.01, O=(0, 0), debug_output='./')
 
     obstacle_coordinate_count = df_est.apply(ObstacleCoordinate_count, axis=1)
 
-    TorF_list = [True if obs_cout > 0 else False
+    TorF_list = [1 if obs_cout > 0 else 0
                  for obs_cout in obstacle_coordinate_count]
 
     if DEBUG:
