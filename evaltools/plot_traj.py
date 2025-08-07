@@ -99,13 +99,13 @@ def plot_map(ax, bitmap, map_origin, map_ppm):
     height_m = height / map_ppm
 
     extent = [
-        map_origin[0],                    # left (x_min)
-        map_origin[0] + width_m,          # right (x_max)
-        map_origin[1] + height_m,                    # bottom (y_min)
-        map_origin[1]           # top (y_max)
+        map_origin[0],
+        map_origin[0] + width_m,
+        map_origin[1],
+        map_origin[1] + height_m
     ]
 
-    ax.imshow(bitmap, extent=extent, alpha=0.5, cmap='gray')
+    ax.imshow(bitmap, extent=extent, alpha=0.5, cmap='gray', origin='lower')
 
 
 def plot_yaw(ax, df_gt, decimation_rate=1):
