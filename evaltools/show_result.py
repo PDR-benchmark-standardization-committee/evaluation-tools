@@ -10,10 +10,10 @@ import json
 import warnings
 warnings.filterwarnings("ignore")
 
-WEIGHTS = {'ce': 1/6, 'rha': 1/6, 'rda_exhibit': 1/6,
-           'rpa_exhibit': 1/6, 'rda_robot': 1/6, 'rpa_robot': 1/6}
+WEIGHTS = {'ce': 1, 'rha': 1, 'rda_exhibit': 1, 'eag': 1,
+           'rpa_exhibit': 1, 'rda_robot': 1, 'rpa_robot': 1}
 EAG_THR = 1.0
-
+STAT_KEY = 'per90'
 
 def main(eval_middle_filenames, sections_filename):
     """
@@ -158,16 +158,13 @@ def calc_Competition_Score(result_dict, weights_table=None, output_dir='./'):
     """
     if weights_table is None:
         weights_table = WEIGHTS
+        
+    score = 0
+    for k in weights_table.keys():
+        score += weights_table[k] * result_dict[k][STAT_KEY]
 
-    Score = weights_table['ce'] * result_dict['ce']['per95'] + \
-        weights_table['rha'] * result_dict['rha']['per95'] + \
-        weights_table['rda_exhibit'] * result_dict['rda_exhibit']['per95'] + \
-        weights_table['rpa_exhibit'] * result_dict['rpa_exhibit']['per95'] + \
-        weights_table['rda_robot'] * result_dict['rda_robot']['per95'] + \
-        weights_table['rpa_robot'] * result_dict['rpa_robot']['per95']
-
-    result_dict['Score'] = Score
-    print(Score)
+    result_dict['Score'] = score
+    print(score)
 
     plot_Score_bar(result_dict, weights_table, output_dir)
 
@@ -178,12 +175,13 @@ def plot_Score_bar(result, weights_table, output_dir='./'):
     labels = []
     values = []
     values_weighted = []
+    
     for key, value in result.items():
         print(key, value)
-        if key in ['ce', 'rha', 'rda_robot', 'rda_exhibit', 'rpa_robot', 'rpa_exhibit']:
+        if key in weights_table.keys():
             labels.append(key)
-            values.append(value['per95'])
-            values_weighted.append(value['per95'] * weights_table[key])
+            values.append(value[STAT_KEY])
+            values_weighted.append(value[STAT_KEY] * weights_table[key])
 
     fig, ax = plt.subplots(1, 2, figsize=(12, 8))
 
@@ -192,16 +190,14 @@ def plot_Score_bar(result, weights_table, output_dir='./'):
     fig.suptitle(F'Total Score:{TotalScore}, weights={Weights}')
 
     ax[0].bar(labels, values)
-    ax[0].set_ylabel('Score (unweighted)')
+    ax[0].set_ylabel(f'Score (unweighted), {STAT_KEY}')
     ax[0].set_xticks(labels)
-    ax[0].set_xticklabels(['CE95', 'HE95', 'RDA_robot95',
-                          'RDA_exhibit95', 'RPA_robot95', 'RPA_exhibit95'], fontsize=8)
+    ax[0].set_xticklabels(list(weights_table.keys()), fontsize=8)
 
     ax[1].bar(labels, values_weighted)
     ax[1].set_ylabel('Score (weighted)')
     ax[1].set_xticks(labels)
-    ax[1].set_xticklabels(['CE95', 'HE95', 'RDA_robot95',
-                          'RDA_exhibit95', 'RPA_robot95', 'RPA_exhibit95'], fontsize=8)
+    ax[1].set_xticklabels(list(weights_table.keys()), fontsize=8)
 
     plt.tight_layout()
     os.makedirs(output_dir, exist_ok=True)
