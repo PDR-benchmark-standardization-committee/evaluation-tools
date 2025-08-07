@@ -134,7 +134,6 @@ def get_evalresult_traj(df_type):
 
 
 def get_evalresult_boolean(df_type):
-    df_type['value'] = df_type['value'].map({'FALSE': 0, 'TRUE': 1})
     df_type['value'] = df_type['value'].astype(float)
     # return len(df_type)/len(df_type[df_type.value == 1])
     return np.sum(df_type.value)/len(df_type)
