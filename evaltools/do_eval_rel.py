@@ -267,7 +267,7 @@ def check_format(df):
     if 'yaw' not in df.columns:
         if np.all([clm in df.columns for clm in ['qx', 'qy', 'qz', 'qw']]):
             # print('convert Quaternion to Yaw')
-            df = convert_quot_to_yaw(df)
+            df = convert_quat_to_yaw(df)
 
     return df
 
