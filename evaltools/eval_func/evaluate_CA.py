@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from evaltools.com_tools.convert_tools import convert_quot_to_yaw, normalize_rad
+from evaltools.com_tools.convert_tools import convert_quat_to_yaw, normalize_rad
 from scipy.spatial.transform import Rotation
 import seaborn as sns
 import scipy.stats as kde
@@ -48,8 +48,8 @@ def calc_xy_errors(df_est, df_gt_data, mode='RCS'):
     """
     """
     # yaw check
-    df_est = convert_quot_to_yaw(df_est)
-    df_gt_data = convert_quot_to_yaw(df_gt_data)
+    df_est = convert_quat_to_yaw(df_est)
+    df_gt_data = convert_quat_to_yaw(df_gt_data)
     # if "yaw" not in df_gt_data.keys():
     #     df_gt_data["yaw"] = [Rotation.from_quat(q).as_euler(
     #         "XYZ")[0] for q in df_gt_data[["q0", "q1", "q2", "q3"]].values]

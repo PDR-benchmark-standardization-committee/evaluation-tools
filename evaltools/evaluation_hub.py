@@ -180,6 +180,8 @@ class EvaluationHub():
                     est, bitmap, bitmap_scale, params_eval["O"])
             elif eval_name == 'FE':
                 result = evt.eval_FE_tl(gt, est)
+            elif eval_name == 'HE':
+                result = evt.eval_HE_tl(gt, est)
 
         except KeyError as ke:
             print(F'【Eval Error in {eval_name}】: {ke}')

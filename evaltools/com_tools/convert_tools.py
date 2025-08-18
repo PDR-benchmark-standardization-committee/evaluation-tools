@@ -8,7 +8,7 @@ import pandas as pd
 from scipy.spatial.transform import Rotation as R
 
 
-def convert_quot_to_yaw(df):
+def convert_quat_to_yaw(df):
     # check yaw
     if 'yaw' not in df.columns:
         if 'qx' not in df.columns:

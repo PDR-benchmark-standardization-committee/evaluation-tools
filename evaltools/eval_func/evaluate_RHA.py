@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from evaltools.com_tools.convert_tools import convert_quot_to_yaw
+from evaltools.com_tools.convert_tools import convert_quat_to_yaw
 
 debug = False
 
@@ -40,10 +40,10 @@ def evaluate_RHA_tl(est1, est2, gt1, gt2, setname=''):
         Error at each timestamp, columns: [timestamp, type, value]
     """
     # check yaw
-    est1 = convert_quot_to_yaw(est1)
-    est2 = convert_quot_to_yaw(est2)
-    gt1 = convert_quot_to_yaw(gt1)
-    gt2 = convert_quot_to_yaw(gt2)
+    est1 = convert_quat_to_yaw(est1)
+    est2 = convert_quat_to_yaw(est2)
+    gt1 = convert_quat_to_yaw(gt1)
+    gt2 = convert_quat_to_yaw(gt2)
 
     # Time synchronization
     df1 = pd.merge_asof(est1, gt1, on='timestamp', tolerance=0.1,

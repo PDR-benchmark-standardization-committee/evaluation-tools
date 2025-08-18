@@ -4,5 +4,6 @@
     "CA":[true, {"mode_CS":"RCS"}],
     "VE":[true, {"is_neg":false}],
     "OE":[true, {"bitmap_path":"data/map/map_comp2025.bmp", "scale":0.01, "O":[-5.625, -12.75]}],
-    "FE":[false, {}]
+    "FE":[false, {}],
+    "HE":[true, {}]
 }
