@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from evaltools.com_tools.convert_tools import convert_quot_to_yaw, normalize_rad
+from evaltools.com_tools.convert_tools import convert_quat_to_yaw, normalize_rad
 
 debug = False
 
@@ -42,10 +42,10 @@ def evaluate_RPA_tl(est1, est2, gt1, gt2, id1=1, id2=2, expose_raw=False):
         Error at each timestamp, columns: [timestamp, type, value]
         type : [rpa_{id1}{id2}, rpa_{id2}{id1}]
     """
-    est1 = convert_quot_to_yaw(est1)
-    est2 = convert_quot_to_yaw(est2)
-    gt1 = convert_quot_to_yaw(gt1)
-    gt2 = convert_quot_to_yaw(gt2)
+    est1 = convert_quat_to_yaw(est1)
+    est2 = convert_quat_to_yaw(est2)
+    gt1 = convert_quat_to_yaw(gt1)
+    gt2 = convert_quat_to_yaw(gt2)
 
     df1 = pd.merge_asof(est1, gt1, on='timestamp', tolerance=0.1,
                         direction='nearest', suffixes=['_est1', '_gt1'])
