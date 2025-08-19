@@ -10,8 +10,17 @@ import json
 import warnings
 warnings.filterwarnings("ignore")
 
-WEIGHTS = {'ce': 1/6, 'rha': 1/6, 'rda_exhibit': 1/6,
-           'rpa_exhibit': 1/6, 'rda_robot': 1/6, 'rpa_robot': 1/6}
+
+SCORE_SETTINGS = {
+    # [score_max_value, score_zero_value, weight]
+    'ce': [0, 2, 90, 1/6],
+    'he': [0, 1, 90, 1/6],
+    'eag': [0, 2, 90, 1/6],
+    'rda_robot': [0, 0.5, 90, 1/6],
+    'rpa_robot': [0, 0.5, 90, 1/6],
+    'rda_exhibit': [0, 0.5, 90, 1/6],
+    'rpa_exhibit': [0, 0.5, 90, 1/6]
+}
 EAG_THR = 1.0
 
 
@@ -61,13 +70,17 @@ def main(eval_middle_filenames, sections_filename):
     df_overall.sort_index(inplace=True)
 
     for type_tag in type_list:
+        score_percentile = 90
         df_type = df_overall[df_overall.type == type_tag]
+
         if type_tag == 'oe' or type_tag == 'fe':
             res = get_evalresult_boolean(df_type)
         else:
             df_type = handle_postprocessing_for_each_evaluation(
                 df_type, type_tag)
-            res = get_evalresult_traj(df_type)
+            if type_tag in SCORE_SETTINGS.keys():
+                score_percentile = SCORE_SETTINGS[type_tag][2]
+            res = get_evalresult_traj(df_type, score_percentile)
 
         result_dict[F'{type_tag}'] = res
 
@@ -85,9 +98,12 @@ def main(eval_middle_filenames, sections_filename):
 
             rel_targets = np.unique(df_type.rel_target)
             for rel_target in rel_targets:
+                score_percentile = 90
                 df_rel_target = df_type[df_type.rel_target == rel_target]
 
-                res = get_evalresult_traj(df_rel_target)
+                if rel_target in SCORE_SETTINGS.keys():
+                    score_percentile = SCORE_SETTINGS[rel_target][2]
+                res = get_evalresult_traj(df_rel_target, score_percentile)
 
                 result_dict[F'{type_tag}_{rel_target}'] = res
 
@@ -113,11 +129,15 @@ def handle_postprocessing_for_each_evaluation(df, type_tag):
 
         return df
 
+    elif type_tag == 'he':
+        df['value'] = np.abs(df.value.astype(float))
+        return df
+
     else:
         return df
 
 
-def get_evalresult_traj(df_type):
+def get_evalresult_traj(df_type, score_percentile=90):
     df_type['value'] = df_type['value'].astype(float)
 
     result = {}
@@ -130,6 +150,8 @@ def get_evalresult_traj(df_type):
     result['per90'] = np.percentile(df_type.value, 90)
     result['per95'] = np.percentile(df_type.value, 95)
 
+    result['score'] = np.percentile(df_type.value, score_percentile)
+
     return result
 
 
@@ -139,15 +161,15 @@ def get_evalresult_boolean(df_type):
     return np.sum(df_type.value)/len(df_type)
 
 
-def calc_Competition_Score(result_dict, weights_table=None, output_dir='./'):
+def calc_Competition_Score(result_dict, score_setting=None, output_dir='./'):
     """
     Calculate overall evaluation score for the xDR_Challenge_2025 competition
 
     Parameters
     ----------
     result_dict : Dictionary
-    weights_table : Dictionary
-        Score weights
+    score_setting : Dictionary
+        Score settings [score_max_value, score_zero_value, percentile, weight]
     output_dir : String
         Output directory name
 
@@ -156,52 +178,64 @@ def calc_Competition_Score(result_dict, weights_table=None, output_dir='./'):
     result_dict : Dictionary
         Dictionary storing evaluation results by key metrics
     """
-    if weights_table is None:
-        weights_table = WEIGHTS
+    if score_setting is None:
+        score_setting = SCORE_SETTINGS
 
-    Score = weights_table['ce'] * result_dict['ce']['per95'] + \
-        weights_table['rha'] * result_dict['rha']['per95'] + \
-        weights_table['rda_exhibit'] * result_dict['rda_exhibit']['per95'] + \
-        weights_table['rpa_exhibit'] * result_dict['rpa_exhibit']['per95'] + \
-        weights_table['rda_robot'] * result_dict['rda_robot']['per95'] + \
-        weights_table['rpa_robot'] * result_dict['rpa_robot']['per95']
+    Score = np.sum([calc_score_per_evaluation(etype, score_setting, result_dict, True)[0]
+                   for etype in score_setting.keys()])
 
     result_dict['Score'] = Score
-    print(Score)
+    print('--------------------')
+    print(F'COMPETITION SCORE : {Score}')
 
-    plot_Score_bar(result_dict, weights_table, output_dir)
+    plot_Score_bar(result_dict, score_setting, output_dir)
 
     return result_dict
 
 
-def plot_Score_bar(result, weights_table, output_dir='./'):
+def calc_score_per_evaluation(etype, score_setting, result_dict, verbose=False):
+    score_100 = score_setting[etype][0]
+    score_0 = score_setting[etype][1]
+
+    score = 100/(score_100-score_0) * \
+        result_dict[etype]['score'] + 100
+    w_score = score_setting[etype][3] * score
+
+    if verbose:
+        print(F"【{etype}】")
+        print(F'SCORE : {score} / W_SCORE : {w_score}')
+    return w_score, score
+
+
+def plot_Score_bar(result, score_setting, output_dir='./'):
     labels = []
     values = []
     values_weighted = []
     for key, value in result.items():
-        print(key, value)
-        if key in ['ce', 'rha', 'rda_robot', 'rda_exhibit', 'rpa_robot', 'rpa_exhibit']:
+        if key in score_setting.keys():
+            w_score_etype, score_etype = calc_score_per_evaluation(
+                key, score_setting, result)
             labels.append(key)
-            values.append(value['per95'])
-            values_weighted.append(value['per95'] * weights_table[key])
+            values.append(score_etype)
+            values_weighted.append(w_score_etype)
 
     fig, ax = plt.subplots(1, 2, figsize=(12, 8))
 
     TotalScore = result['Score']
-    Weights = [f"{x:.3f}" for x in weights_table.values()]
+    Weights = [f"{x[2]:.3f}" for x in score_setting.values()]
     fig.suptitle(F'Total Score:{TotalScore}, weights={Weights}')
 
     ax[0].bar(labels, values)
     ax[0].set_ylabel('Score (unweighted)')
     ax[0].set_xticks(labels)
-    ax[0].set_xticklabels(['CE95', 'HE95', 'RDA_robot95',
-                          'RDA_exhibit95', 'RPA_robot95', 'RPA_exhibit95'], fontsize=8)
+    ax[0].set_xticklabels(['CE95', 'HE95', 'EAG95', 'RDA_robot95',
+                          'RPA_robot95', 'RDA_exhibit95', 'RPA_exhibit95'], fontsize=8)
 
     ax[1].bar(labels, values_weighted)
     ax[1].set_ylabel('Score (weighted)')
     ax[1].set_xticks(labels)
-    ax[1].set_xticklabels(['CE95', 'HE95', 'RDA_robot95',
-                          'RDA_exhibit95', 'RPA_robot95', 'RPA_exhibit95'], fontsize=8)
+    ax[1].set_xticklabels(['CE95', 'HE95', 'EAG95', 'RDA_robot95',
+                          'RPA_robot95', 'RDA_exhibit95', 'RPA_exhibit95'], fontsize=8)
 
     plt.tight_layout()
     os.makedirs(output_dir, exist_ok=True)
@@ -225,7 +259,6 @@ def main_cl():
         sys.exit(1)
 
     result_dict = main(args.eval_middle_files, args.sections_file)
-    print(result_dict)
 
     result_dict = calc_Competition_Score(
         result_dict, output_dir=args.output_json)

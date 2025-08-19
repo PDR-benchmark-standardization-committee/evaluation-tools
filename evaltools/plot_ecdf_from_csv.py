@@ -45,7 +45,7 @@ def main(eval_middle_filenames, type_tag, output_dir, suffix, sections_filename=
 
         df_target = df_overall[df_overall.type == tagname]
         df_target = handle_postprocessing_for_each_evaluation(
-            df_target, tagname)
+            df_target.copy(), tagname)
         make_cdf_graph(df_target.value.astype(
             float), tagname, output_dir, suffix)
 
