@@ -18,6 +18,22 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
 
 
+class ProgressView():
+    def __init__(self):
+        self.loop_status = ""
+        self.eval_status = ""
+
+    def show_progress(self, done=False):
+        label = "done" if done else "running"
+        progress_text = F"[【{self.eval_status}】 {label}]"
+
+        print(f"\r{self.loop_status} : {progress_text} ",
+              end="", flush=True)
+
+
+pv = ProgressView()
+
+
 def main_with_dir(est_dir, gt_dir, combination_table, output_result="evaluation_result.csv", evaluation_setting=None):
     """
     xDR Challenge 2025
@@ -27,6 +43,8 @@ def main_with_dir(est_dir, gt_dir, combination_table, output_result="evaluation_
     combination_table : String
         Filename of the table listing est-gt combinations
     """
+    print('Absolute evaluation')
+
     # Explicitly delete old file because mode='a'
     if os.path.exists(F'{output_result}'):
         os.remove(F'{output_result}')
@@ -35,6 +53,7 @@ def main_with_dir(est_dir, gt_dir, combination_table, output_result="evaluation_
         # Use default if not provided
         evaluation_setting = F'{parent_dir}{os.sep}evaluation_setting.json'
         evaluation_setting = load_json(evaluation_setting)
+        # print(F'load {evaluation_setting}')
 
     # Load combination_table
     comb_set = pd.read_csv(combination_table, header=0,
@@ -67,7 +86,9 @@ def main_with_dir(est_dir, gt_dir, combination_table, output_result="evaluation_
                 evaluation_setting_ind['EAG'][1]['ALIP_timerange'] = ALIP_filename
 
         try:
-            print(F'----- {data_name} -----')
+            pv.loop_status = F"{data_name}"
+            pv.show_progress()
+            # print(F'----- {data_name} -----')
             result = main(est_filename1, gt_filename1, evaluation_setting_ind)
             result = add_colums(result, data_name)
         except Exception as e:
@@ -184,11 +205,21 @@ def main(est_filename, gt_filename, evaluation_setting=None):
         do_eval = val[0]
         param = val[-1]
         if do_eval:
+            pv.eval_status = eval_name
+            pv.show_progress()
+
+            # main
             df_result = eh.eval_switcher_simple(
                 eval_name, df_est, df_gt, param)
 
+            pv.show_progress(True)
+
         if df_tl is None:
+            # first loop
             df_tl = df_result
+        elif df_result is None:
+            # Skip if evaluation is not possible.
+            pass
         else:
             df_tl = pd.concat([df_tl, df_result])
 

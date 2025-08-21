@@ -44,15 +44,16 @@ def eval_EAG_tl(df_gt_data, df_est, ALIP_timerange=[], mode='T', is_realtime=Fal
         df_ALIP = pd.DataFrame([ALIP_timerange], columns=[
                                "ts_start", "ts_end"])
 
-    # 並列処理実行
-    print('calc_EAG')
-    result_dfs = Parallel(n_jobs=-1, backend="loky", verbose=10)(
+    # Execute in parallel
+    result_dfs = Parallel(n_jobs=-1, backend="loky", verbose=0)(
         delayed(process_row)(df_gt_data, df_est, [
             row.ts_start, row.ts_end], mode, is_realtime, verbose)
         for row in df_ALIP.itertuples(index=False)
     )
 
-    # 結果結合
+    # Combine results
+    if len(result_dfs) < 1:
+        return None
     df_eag_tl = pd.concat(result_dfs)
     df_eag_tl.sort_values("timestamp", inplace=True)
 

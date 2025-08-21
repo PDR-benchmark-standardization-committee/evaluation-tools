@@ -26,6 +26,22 @@ GT_TAG = ''
 DEBUG = False
 
 
+class ProgressView():
+    def __init__(self):
+        self.loop_status = ""
+        self.eval_status = ""
+
+    def show_progress(self, done=False):
+        label = "done" if done else "running"
+        progress_text = F"[【{self.eval_status}】 {label}]"
+
+        print(f"\r{self.loop_status} : {progress_text} ",
+              end="", flush=True)
+
+
+pv = ProgressView()
+
+
 def main_with_dp3(est_dir, gt_dir, evaluation_setting=None):
     """
     Perform relative evaluation for all combinations of trajectories in the specified directory.
@@ -82,6 +98,8 @@ def main_with_comb_table(est1_dir, est2_dir, gt1_dir, gt2_dir, combination_table
         Intermediate file of relative evaluation results (per timestamp),
         collumns : [timestamp, type, value, section, data_name, rel_target]
     """
+    print('Relative evaluation')
+
     # Explicitly delete old file because mode='a'
     if os.path.exists(F'{output_result}'):
         os.remove(F'{output_result}')
@@ -89,7 +107,7 @@ def main_with_comb_table(est1_dir, est2_dir, gt1_dir, gt2_dir, combination_table
     if evaluation_setting is None:
         # Use default if not provided
         evaluation_setting = F'{parent_dir}/evaluation_setting_rel.json'
-        print(F'load {evaluation_setting}')
+        # print(F'load {evaluation_setting}')
 
     # Load combination_table
     comb_set = pd.read_csv(combination_table, header=0,
@@ -117,7 +135,9 @@ def main_with_comb_table(est1_dir, est2_dir, gt1_dir, gt2_dir, combination_table
         gt_filename2 += row.gt2 if '.csv' in row.gt2 else row.gt2 + '.csv'
 
         try:
-            print(F'----- {data_name} {section} {rel_target} -----')
+            pv.loop_status = F"{data_name}/{section}/{rel_target}"
+            pv.show_progress()
+            # print(F'----- {data_name} {section} {rel_target} -----')
             result = main(est_filename1, est_filename2,
                           gt_filename1, gt_filename2, evaluation_setting, id1, id2)
             result = add_colums(result, section, data_name, rel_target)
@@ -241,11 +261,17 @@ def main(est_filename1, est_filename2, gt_filename1, gt_filename2, evaluation_se
     eh = EvaluationHub(evaluation_dict)
     df_tl = None
     for eval_name, val in eh.eval_list.items():
-        print(F'【{eval_name}】')
+        # print(F'【{eval_name}】')
         do_eval, param = val
         if do_eval:
+            pv.eval_status = eval_name
+            pv.show_progress()
+
+            # main
             df_result = eh.eval_switcher_simple_rel(
                 eval_name, id1, id2, df_est1, df_est2, df_gt1, df_gt2, param)
+
+            pv.show_progress(True)
 
         if df_tl is None:
             df_tl = df_result
