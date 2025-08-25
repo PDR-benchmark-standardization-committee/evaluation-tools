@@ -24,7 +24,7 @@ SCORE_SETTINGS = {
 EAG_THR = 1.0
 
 
-def main(eval_middle_filenames, sections_filename):
+def main(eval_middle_filenames, sections_filename, score_setting=None):
     """
     Calculate overall evaluation results from intermediate accuracy evaluation files.
 
@@ -58,6 +58,9 @@ def main(eval_middle_filenames, sections_filename):
         if len(time_intervals) < 1:
             time_intervals = [[df_m.index.min(), df_m.index.max()]]
 
+    if score_setting is None:
+        score_setting = SCORE_SETTINGS
+
     result_dict = {}
     type_list = np.unique(df_m.type)
     df_overall = pd.DataFrame()
@@ -78,9 +81,7 @@ def main(eval_middle_filenames, sections_filename):
         else:
             df_type = handle_postprocessing_for_each_evaluation(
                 df_type, type_tag)
-            if type_tag in SCORE_SETTINGS.keys():
-                score_percentile = SCORE_SETTINGS[type_tag][2]
-            res = get_evalresult_traj(df_type, score_percentile)
+            res = get_evalresult_traj(df_type, type_tag, score_setting)
 
         result_dict[F'{type_tag}'] = res
 
@@ -98,12 +99,10 @@ def main(eval_middle_filenames, sections_filename):
 
             rel_targets = np.unique(df_type.rel_target)
             for rel_target in rel_targets:
-                score_percentile = 90
                 df_rel_target = df_type[df_type.rel_target == rel_target]
 
-                if rel_target in SCORE_SETTINGS.keys():
-                    score_percentile = SCORE_SETTINGS[rel_target][2]
-                res = get_evalresult_traj(df_rel_target, score_percentile)
+                res = get_evalresult_traj(
+                    df_rel_target, F'{type_tag}_{rel_target}', score_setting)
 
                 result_dict[F'{type_tag}_{rel_target}'] = res
 
@@ -137,7 +136,7 @@ def handle_postprocessing_for_each_evaluation(df, type_tag):
         return df
 
 
-def get_evalresult_traj(df_type, score_percentile=90):
+def get_evalresult_traj(df_type, etype, score_setting):
     df_type['value'] = df_type['value'].astype(float)
 
     result = {}
@@ -150,7 +149,11 @@ def get_evalresult_traj(df_type, score_percentile=90):
     result['per90'] = np.percentile(df_type.value, 90)
     result['per95'] = np.percentile(df_type.value, 95)
 
-    result['score'] = np.percentile(df_type.value, score_percentile)
+    if etype in score_setting.keys():
+        score_percentile = score_setting[etype][2]
+        score = calc_score_per_evaluation(
+            etype, score_setting, np.percentile(df_type.value, score_percentile))
+        result['score'] = score
 
     return result
 
@@ -181,11 +184,16 @@ def calc_Competition_Score(result_dict, score_setting=None, output_dir='./'):
     if score_setting is None:
         score_setting = SCORE_SETTINGS
 
-    Score = np.sum([calc_score_per_evaluation(etype, score_setting, result_dict, True)[0]
-                   for etype in score_setting.keys()])
+    # _Score = np.sum([score_setting[etype][3] * value['score']
+    #                  for etype, value in result_dict.items()])
+    # print(result_dict)
+    # print(score_setting)
+    Score = np.sum([result_dict[etype]['score'] * value[3]
+                   for etype, value in score_setting.items()])
 
     result_dict['Score'] = Score
     print('--------------------')
+    # print(F'COMPETITION _SCORE : {_Score}')
     print(F'COMPETITION SCORE : {Score}')
 
     plot_Score_bar(result_dict, score_setting, output_dir)
@@ -193,18 +201,16 @@ def calc_Competition_Score(result_dict, score_setting=None, output_dir='./'):
     return result_dict
 
 
-def calc_score_per_evaluation(etype, score_setting, result_dict, verbose=False):
+def calc_score_per_evaluation(etype, score_setting, eval_value, verbose=False):
     score_100 = score_setting[etype][0]
     score_0 = score_setting[etype][1]
 
-    score = 100/(score_100-score_0) * \
-        result_dict[etype]['score'] + 100
-    w_score = score_setting[etype][3] * score
+    score = 100/(score_100-score_0) * eval_value + 100
 
     if verbose:
         print(F"【{etype}】")
-        print(F'SCORE : {score} / W_SCORE : {w_score}')
-    return w_score, score
+        print(F'SCORE : {score} / W_SCORE : {score * score_setting[etype][3]}')
+    return score
 
 
 def plot_Score_bar(result, score_setting, output_dir='./'):
@@ -213,11 +219,11 @@ def plot_Score_bar(result, score_setting, output_dir='./'):
     values_weighted = []
     for key, value in result.items():
         if key in score_setting.keys():
-            w_score_etype, score_etype = calc_score_per_evaluation(
-                key, score_setting, result)
+            # score_etype = calc_score_per_evaluation(
+            #     key, score_setting, result[])
             labels.append(key)
-            values.append(score_etype)
-            values_weighted.append(w_score_etype)
+            values.append(value['score'])
+            values_weighted.append(value['score'] * score_setting[key][2])
 
     fig, ax = plt.subplots(1, 2, figsize=(12, 8))
 
