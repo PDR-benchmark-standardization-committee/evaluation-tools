@@ -217,13 +217,14 @@ def plot_Score_bar(result, score_setting, output_dir='./'):
     labels = []
     values = []
     values_weighted = []
-    for key, value in result.items():
-        if key in score_setting.keys():
-            # score_etype = calc_score_per_evaluation(
-            #     key, score_setting, result[])
-            labels.append(key)
-            values.append(value['score'])
-            values_weighted.append(value['score'] * score_setting[key][3])
+
+    for key, value in score_setting.items():
+        score = result[key]['score']
+        w_score = score * value[3]
+
+        labels.append(key)
+        values.append(score)
+        values_weighted.append(w_score)
 
     fig, ax = plt.subplots(1, 2, figsize=(12, 8))
 
