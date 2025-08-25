@@ -223,7 +223,7 @@ def plot_Score_bar(result, score_setting, output_dir='./'):
             #     key, score_setting, result[])
             labels.append(key)
             values.append(value['score'])
-            values_weighted.append(value['score'] * score_setting[key][2])
+            values_weighted.append(value['score'] * score_setting[key][3])
 
     fig, ax = plt.subplots(1, 2, figsize=(12, 8))
 
