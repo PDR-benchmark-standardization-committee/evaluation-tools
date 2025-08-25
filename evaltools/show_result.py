@@ -228,7 +228,7 @@ def plot_Score_bar(result, score_setting, output_dir='./'):
     fig, ax = plt.subplots(1, 2, figsize=(12, 8))
 
     TotalScore = result['Score']
-    Weights = [f"{x[2]:.3f}" for x in score_setting.values()]
+    Weights = [f"{x[3]:.3f}" for x in score_setting.values()]
     fig.suptitle(F'Total Score:{TotalScore}, weights={Weights}')
 
     ax[0].bar(labels, values)
