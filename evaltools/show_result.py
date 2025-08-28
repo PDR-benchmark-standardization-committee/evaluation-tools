@@ -79,7 +79,6 @@ def main(eval_middle_filenames, sections_filename, score_setting=None):
     df_overall.sort_index(inplace=True)
 
     for type_tag in type_list:
-        score_percentile = 90
         df_type = df_overall[df_overall.type == type_tag]
 
         if type_tag == 'oe' or type_tag == 'fe':
@@ -116,7 +115,23 @@ def main(eval_middle_filenames, sections_filename, score_setting=None):
 
 
 def handle_postprocessing_for_each_evaluation(df, type_tag):
+    """
+    Calculate evaluation-specific data transformation
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Time series error for each evaluation
+    type_tag : string
+        evaluation type tag
+
+    Returns
+    -------
+    df : pandas.DataFrame
+        Time series error for each evaluation
+    """
     if type_tag == 'eag':
+        # value : [error_distance_from_gt];[ALIP_elapsed_time];[ALIP_elapsed_distance];[ALIP_elapsed_angle]
         def decode_value_eag(row):
             s_list = row.split(';')
             s_list = [float(s) for s in s_list]
@@ -228,6 +243,7 @@ def calc_Competition_Score(result_dict, score_setting=None, output_dir='./'):
     Parameters
     ----------
     result_dict : Dictionary
+        Dictionary storing the results of each evaluation value
     score_setting : Dictionary
         Score settings [score_max_value, score_zero_value, percentile, weight]
     output_dir : String
@@ -269,6 +285,25 @@ def calc_Competition_Score(result_dict, score_setting=None, output_dir='./'):
 
 
 def calc_score_per_evaluation(etype, score_setting, eval_value, verbose=False):
+    """
+    Calculate the competition score (unweighted) for each evaluation function
+
+    Parameters
+    ----------
+    etype : string
+        evaluation type tag
+    score_setting : dictionary
+        Settings for score conversion
+    eval_value : pandas.DataFrame
+        Time series error for each evaluation
+    verbose : boolean
+        print score and weighted score 
+
+    Returns
+    -------
+    score : float
+        Competition score (unweighted)
+    """
     score_100 = score_setting[etype][0]
     score_0 = score_setting[etype][1]
 
@@ -295,7 +330,6 @@ def plot_Score_bar(result, score_setting, output_dir='./'):
             values.append(float(value['score']))
             values_weighted.append(float(value['score']) * w)
             weights_for_title.append(f"{w:.3f}")
-
     fig, ax = plt.subplots(1, 2, figsize=(12, 8))
 
     TotalScore = result.get('Score', 0.0)
