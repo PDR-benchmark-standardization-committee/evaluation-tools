@@ -234,14 +234,12 @@ def plot_Score_bar(result, score_setting, output_dir='./'):
     ax[0].bar(labels, values)
     ax[0].set_ylabel('Score (unweighted)')
     ax[0].set_xticks(labels)
-    ax[0].set_xticklabels(['CE95', 'HE95', 'EAG95', 'RDA_robot95',
-                          'RPA_robot95', 'RDA_exhibit95', 'RPA_exhibit95'], fontsize=8)
+    ax[0].set_xticklabels(labels, fontsize=8)
 
     ax[1].bar(labels, values_weighted)
     ax[1].set_ylabel('Score (weighted)')
     ax[1].set_xticks(labels)
-    ax[1].set_xticklabels(['CE95', 'HE95', 'EAG95', 'RDA_robot95',
-                          'RPA_robot95', 'RDA_exhibit95', 'RPA_exhibit95'], fontsize=8)
+    ax[1].set_xticklabels(labels, fontsize=8)
 
     plt.tight_layout()
     os.makedirs(output_dir, exist_ok=True)
