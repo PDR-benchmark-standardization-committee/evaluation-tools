@@ -12,14 +12,20 @@ warnings.filterwarnings("ignore")
 
 
 SCORE_SETTINGS = {
-    # [score_max_value, score_zero_value, weight]
-    'ce': [0, 2, 90, 1/6],
-    'he': [0, 1, 90, 1/6],
-    'eag': [0, 2, 90, 1/6],
-    'rda_robot': [0, 0.5, 90, 1/6],
-    'rpa_robot': [0, 0.5, 90, 1/6],
-    'rda_exhibit': [0, 0.5, 90, 1/6],
-    'rpa_exhibit': [0, 0.5, 90, 1/6]
+    # 各キーに対し、辞書のリストで設定
+    # 各辞書は:
+    #   - "max": スコア100点となる評価値
+    #   - "zero": スコア0点となる評価値
+    #   - "weight": 総合点での重み
+    #   - "stat": "percentile" | "mean" | "median"（どの統計量で評価値を取るか）
+    #   - "q": stat=="percentile" のときのみ使用（0-100）
+    'ce':  [ {'max': 0, 'zero': 10,     'weight': 1/7, 'stat': 'mean'} ],
+    'he':  [ {'max': 0, 'zero': np.pi/2,'weight': 1/7, 'stat': 'percentile', 'q': 50} ],
+    'eag': [ {'max': 0, 'zero': 0.25,      'weight': 1/7, 'stat': 'percentile', 'q': 50} ],
+    'rda_robot':   [ {'max': 0, 'zero': 1,      'weight': 1/7, 'stat': 'percentile', 'q': 50} ],
+    'rpa_robot':   [ {'max': 0, 'zero': np.pi,'weight': 1/7, 'stat': 'percentile', 'q': 50} ],
+    'rda_exhibit': [ {'max': 0, 'zero': 1,      'weight': 1/7, 'stat': 'percentile', 'q': 50} ],
+    'rpa_exhibit': [ {'max': 0, 'zero': np.pi,'weight': 1/7, 'stat': 'percentile', 'q': 50} ],
 }
 EAG_THR = 1.0
 
@@ -151,6 +157,44 @@ def handle_postprocessing_for_each_evaluation(df, type_tag):
         return df
 
 
+def _legacy_to_dict_list(entry):
+    """
+    旧形式 [max, zero, percentile, weight] を新形式の辞書リストに変換。
+    percentileはstat='percentile', q=<値>として扱う。
+    既に辞書リストならそのまま返す。
+    """
+    if isinstance(entry, list):
+        # 旧形式 or 既に辞書リスト
+        if len(entry) > 0 and isinstance(entry[0], dict):
+            return entry  # 新形式
+        # 旧形式 [max, zero, percentile, weight]
+        if len(entry) == 4:
+            max_v, zero_v, per, w = entry
+            return [ {'max': max_v, 'zero': zero_v, 'weight': w, 'stat': 'percentile', 'q': per} ]
+    elif isinstance(entry, dict):
+        # 1個だけ辞書で来た場合も受ける
+        return [entry]
+    raise ValueError("Invalid SCORE_SETTINGS entry format.")
+
+
+def _select_stat_value(df_series, stat='percentile', q=90):
+    if stat == 'mean':
+        return float(df_series.mean())
+    elif stat == 'median':
+        return float(df_series.median())
+    elif stat == 'percentile':
+        return float(np.percentile(df_series.to_numpy(), q))
+    else:
+        raise ValueError(f"Unsupported stat: {stat}")
+
+
+def calc_score_value(eval_value, max_value, zero_value):
+    """
+    max_value(=100点), zero_value(=0点) を線形に結ぶスコア（上限下限はここではクリップしない）
+    """
+    return 100.0/(max_value - zero_value) * eval_value + 100.0
+
+
 def get_evalresult_traj(df_type, etype, score_setting):
     df_type['value'] = df_type['value'].astype(float)
 
@@ -165,12 +209,25 @@ def get_evalresult_traj(df_type, etype, score_setting):
     result['per95'] = np.percentile(df_type.value, 95)
 
     if etype in score_setting.keys():
-        score_percentile = score_setting[etype][2]
-        score = calc_score_per_evaluation(
-            etype, score_setting, np.percentile(df_type.value, score_percentile))
-        result['score'] = score
+        cfg_list = _legacy_to_dict_list(score_setting[etype])
+
+        per_cfg_scores = []
+        for cfg in cfg_list:
+            stat = cfg.get('stat', 'percentile')
+            q = cfg.get('q', 90)
+            max_v = cfg['max']
+            zero_v = cfg['zero']
+
+            eval_value = _select_stat_value(df_type.value, stat=stat, q=q)
+            score_val = calc_score_value(eval_value, max_v, zero_v)
+            per_cfg_scores.append(score_val)
+
+        # 複数設定がある場合は平均
+        result['score_detail'] = per_cfg_scores  # 参考用（配列）
+        result['score'] = float(np.mean(per_cfg_scores))
 
     return result
+
 
 
 def get_evalresult_boolean(df_type):
@@ -200,12 +257,22 @@ def calc_Competition_Score(result_dict, score_setting=None, output_dir='./'):
     if score_setting is None:
         score_setting = SCORE_SETTINGS
 
-    # _Score = np.sum([score_setting[etype][3] * value['score']
-    #                  for etype, value in result_dict.items()])
-    # print(result_dict)
-    # print(score_setting)
-    Score = np.sum([result_dict[etype]['score'] * value[3]
-                   for etype, value in score_setting.items()])
+    # etypeごとのweightを算出（新形式/旧形式対応）
+    etype_weights = {}
+    for etype, entry in score_setting.items():
+        cfg_list = _legacy_to_dict_list(entry)
+        weights = [cfg.get('weight', 0.0) for cfg in cfg_list]
+        if len(weights) == 0:
+            w = 0.0
+        else:
+            w = float(np.mean(weights))
+        etype_weights[etype] = w
+
+    # 総合スコア
+    Score = 0.0
+    for etype, res in result_dict.items():
+        if etype in etype_weights and isinstance(res, dict) and 'score' in res:
+            Score += res['score'] * etype_weights[etype]
 
     result_dict['Score'] = Score
     print('--------------------')
@@ -252,32 +319,32 @@ def plot_Score_bar(result, score_setting, output_dir='./'):
     labels = []
     values = []
     values_weighted = []
+    weights_for_title = []
 
-    for key, value in score_setting.items():
-        score = result[key]['score']
-        w_score = score * value[3]
+    for key, value in result.items():
+        if key in score_setting.keys() and isinstance(value, dict) and 'score' in value:
+            cfg_list = _legacy_to_dict_list(score_setting[key])
+            w = float(np.mean([c.get('weight', 0.0) for c in cfg_list])) if len(cfg_list) > 0 else 0.0
 
-        labels.append(key)
-        values.append(score)
-        values_weighted.append(w_score)
-
+            labels.append(key)
+            values.append(float(value['score']))
+            values_weighted.append(float(value['score']) * w)
+            weights_for_title.append(f"{w:.3f}")
     fig, ax = plt.subplots(1, 2, figsize=(12, 8))
 
-    TotalScore = result['Score']
-    Weights = [f"{x[3]:.3f}" for x in score_setting.values()]
-    fig.suptitle(F'Total Score:{TotalScore}, weights={Weights}')
+    TotalScore = result.get('Score', 0.0)
+    fig.suptitle(F'Total Score:{TotalScore:.3f}, weights={weights_for_title}')
 
     ax[0].bar(labels, values)
     ax[0].set_ylabel('Score (unweighted)')
     ax[0].set_xticks(labels)
-    ax[0].set_xticklabels(['CE95', 'HE95', 'EAG95', 'RDA_robot95',
-                          'RPA_robot95', 'RDA_exhibit95', 'RPA_exhibit95'], fontsize=8)
+    ax[0].set_xticklabels(labels, fontsize=8, rotation=20)
+    ax[0].set_ylim(top=100)
 
     ax[1].bar(labels, values_weighted)
     ax[1].set_ylabel('Score (weighted)')
     ax[1].set_xticks(labels)
-    ax[1].set_xticklabels(['CE95', 'HE95', 'EAG95', 'RDA_robot95',
-                          'RPA_robot95', 'RDA_exhibit95', 'RPA_exhibit95'], fontsize=8)
+    ax[1].set_xticklabels(labels, fontsize=8, rotation=20)
 
     plt.tight_layout()
     os.makedirs(output_dir, exist_ok=True)
