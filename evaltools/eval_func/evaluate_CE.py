@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 
-def eval_CE_tl(df_gt_data, df_est, right_on=False):
+def eval_CE_tl(df_gt_data, df_est, eval_timerange=[], right_on=False):
     """
     Calculate Circular-Error timeline
 
@@ -17,6 +17,8 @@ def eval_CE_tl(df_gt_data, df_est, right_on=False):
         Ground truth, columns: [timestamp, x, y, theta, floor]
     df_est : pandas.DataFrame
         Estimated position, columns: [timestamp, x, y, floor, ...]
+    eval_timerange : list
+        Time range, [float, float]
     right_on    : boolean
         False:pd.merge_asof(df_gt, df_est) / True:pd.merge_asof(df_est, df_gt)
 
@@ -30,6 +32,19 @@ def eval_CE_tl(df_gt_data, df_est, right_on=False):
     df_gt_data = df_gt_data.dropna(subset=("x", "y"))
     df_est = df_est.dropna(subset=("x", "y"))
 
+    # Set eval timerange
+    if type(eval_timerange) == str:
+        df_timerange = pd.read_csv(eval_timerange, header=0)
+    elif len(eval_timerange) < 1:
+        df_timerange = pd.DataFrame(
+            [[df_gt_data.index[0], df_gt_data.index[-1]]], columns=["ts_start", "ts_end"])
+    elif is_2d_array(eval_timerange):
+        df_timerange = pd.DataFrame(
+            eval_timerange, columns=["ts_start", "ts_end"])
+    else:
+        df_timerange = pd.DataFrame([eval_timerange], columns=[
+            "ts_start", "ts_end"])
+
     if right_on:
         df_eval = pd.merge_asof(df_est, df_gt_data,
                                 left_index=True, right_index=True, tolerance=0.5, direction='nearest',
@@ -39,6 +54,8 @@ def eval_CE_tl(df_gt_data, df_est, right_on=False):
                                 left_index=True, right_index=True, tolerance=0.5, direction='nearest',
                                 suffixes=["_gt", "_est"])
     df_eval = df_eval.dropna(subset=("x_gt", "y_gt", "x_est", "y_est"))
+
+    df_eval = filter_timerange(df_eval, df_timerange)
 
     # # floor check
     # df_eval["floor_correct"] = (df_eval["floor_est"] == df_eval["floor_gt"])
@@ -94,6 +111,34 @@ def eval_SE_tl(df_gt_data, df_est):
                             'type': type_tag, 'value': err_dst}).set_index('timestamp')
 
     return df_ce_tl
+
+
+def is_2d_array(lst):
+    try:
+        arr = np.array(lst)
+        return arr.ndim == 2
+    except:
+        return False
+
+
+def filter_timerange(df, df_timerange):
+    if len(df_timerange) == 0:
+        # If no intervals, return empty
+        df_in = df.iloc[0:0].copy()
+    else:
+        # Vectorized check whether it falls within any interval (inclusive of both ends)
+        ts = df.index.to_numpy()
+        starts = df_timerange["ts_start"].to_numpy()
+        ends = df_timerange["ts_end"].to_numpy()
+
+        # shape: (len(df), len(df_VISO))
+        in_any = (ts[:, None] >= starts[None, :]) & (
+            ts[:, None] <= ends[None, :])
+
+        mask = in_any.any(axis=1)
+
+        df_in = df.loc[mask].copy()
+    return df_in
 
 
 def eval_CE(df_est, step, quantile=50):

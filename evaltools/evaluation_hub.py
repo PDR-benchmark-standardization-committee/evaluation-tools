@@ -154,7 +154,7 @@ class EvaluationHub():
 
         try:
             if eval_name == 'CE':
-                result = evt.eval_CE_tl(gt, est)
+                result = evt.eval_CE_tl(gt, est, **params_eval)
             elif eval_name == 'SE':
                 result = evt.eval_SE_tl(gt, est)
             elif eval_name == 'EAG':
