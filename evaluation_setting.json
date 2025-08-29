@@ -1,5 +1,5 @@
 {
-    "CE":[true, {}],
+    "CE":[true, {"eval_timerange":"data/VISO/"}],
     "EAG":[true, {"ALIP_timerange":"data/ALIP/", "is_realtime":true}],
     "CA":[true, {"mode_CS":"RCS"}],
     "VE":[true, {"is_neg":false}],
