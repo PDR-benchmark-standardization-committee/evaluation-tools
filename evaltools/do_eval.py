@@ -77,13 +77,19 @@ def main_with_dir(est_dir, gt_dir, combination_table, output_result="evaluation_
         gt_filename1 += row.gt1 if '.csv' in row.gt1 else row.gt1 + '.csv'
 
         # handle xDR-Challenge-2025 ALIP
+        evaluation_setting_ind = copy.deepcopy(evaluation_setting)
         if evaluation_setting['EAG'][0]:
-            evaluation_setting_ind = copy.deepcopy(evaluation_setting)
             eag_setting_dict = evaluation_setting['EAG'][1]
             if 'ALIP_timerange' in eag_setting_dict.keys() and type(eag_setting_dict['ALIP_timerange']) == str:
                 ALIP_filename = eag_setting_dict['ALIP_timerange'] + \
                     F'ALIP_{data_name}.csv'
                 evaluation_setting_ind['EAG'][1]['ALIP_timerange'] = ALIP_filename
+        if evaluation_setting['CE'][0]:
+            ce_setting_dict = evaluation_setting['CE'][1]
+            if 'eval_timerange' in ce_setting_dict.keys() and type(ce_setting_dict['eval_timerange']) == str:
+                timerange_filename = ce_setting_dict['eval_timerange'] + \
+                    F'VISO_{data_name}.csv'
+                evaluation_setting_ind['CE'][1]['eval_timerange'] = timerange_filename
 
         try:
             pv.loop_status = F"{data_name}"
