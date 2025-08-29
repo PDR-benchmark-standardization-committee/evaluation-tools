@@ -23,9 +23,9 @@ SCORE_SETTINGS = {
     'he':  [ {'max': 0, 'zero': np.pi/2,'weight': 1/7, 'stat': 'percentile', 'q': 50} ],
     'eag': [ {'max': 0, 'zero': 0.25,      'weight': 1/7, 'stat': 'percentile', 'q': 50} ],
     'rda_robot':   [ {'max': 0, 'zero': 1,      'weight': 1/7, 'stat': 'percentile', 'q': 50} ],
-    'rpa_robot':   [ {'max': 0, 'zero': np.pi/2,'weight': 1/7, 'stat': 'percentile', 'q': 50} ],
+    'rpa_robot':   [ {'max': 0, 'zero': np.pi,'weight': 1/7, 'stat': 'percentile', 'q': 50} ],
     'rda_exhibit': [ {'max': 0, 'zero': 1,      'weight': 1/7, 'stat': 'percentile', 'q': 50} ],
-    'rpa_exhibit': [ {'max': 0, 'zero': np.pi/2,'weight': 1/7, 'stat': 'percentile', 'q': 50} ],
+    'rpa_exhibit': [ {'max': 0, 'zero': np.pi,'weight': 1/7, 'stat': 'percentile', 'q': 50} ],
 }
 EAG_THR = 1.0
 
