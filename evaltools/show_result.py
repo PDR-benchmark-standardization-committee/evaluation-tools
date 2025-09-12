@@ -19,7 +19,7 @@ SCORE_SETTINGS = {
     #   - "weight": 総合点での重み
     #   - "stat": "percentile" | "mean" | "median"（どの統計量で評価値を取るか）
     #   - "q": stat=="percentile" のときのみ使用（0-100）
-    'ce':  [{'max': 0, 'zero': 10,     'weight': 1/7, 'stat': 'mean'}],
+    'ce':  [{'max': 0, 'zero': 10,     'weight': 1/7, 'stat': 'percentile', 'q': 95}],
     'he':  [{'max': 0, 'zero': np.pi/2, 'weight': 1/7, 'stat': 'percentile', 'q': 50}],
     'eag': [{'max': 0, 'zero': 0.25,      'weight': 1/7, 'stat': 'percentile', 'q': 50}],
     'rda_robot':   [{'max': 0, 'zero': 1,      'weight': 1/7, 'stat': 'percentile', 'q': 50}],
