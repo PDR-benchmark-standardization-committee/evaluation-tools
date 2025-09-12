@@ -19,13 +19,13 @@ SCORE_SETTINGS = {
     #   - "weight": 総合点での重み
     #   - "stat": "percentile" | "mean" | "median"（どの統計量で評価値を取るか）
     #   - "q": stat=="percentile" のときのみ使用（0-100）
-    'ce':  [ {'max': 0, 'zero': 10,     'weight': 1/7, 'stat': 'mean'} ],
-    'he':  [ {'max': 0, 'zero': np.pi/2,'weight': 1/7, 'stat': 'percentile', 'q': 50} ],
-    'eag': [ {'max': 0, 'zero': 0.25,      'weight': 1/7, 'stat': 'percentile', 'q': 50} ],
-    'rda_robot':   [ {'max': 0, 'zero': 1,      'weight': 1/7, 'stat': 'percentile', 'q': 50} ],
-    'rpa_robot':   [ {'max': 0, 'zero': np.pi,'weight': 1/7, 'stat': 'percentile', 'q': 50} ],
-    'rda_exhibit': [ {'max': 0, 'zero': 1,      'weight': 1/7, 'stat': 'percentile', 'q': 50} ],
-    'rpa_exhibit': [ {'max': 0, 'zero': np.pi,'weight': 1/7, 'stat': 'percentile', 'q': 50} ],
+    'ce':  [{'max': 0, 'zero': 10,     'weight': 1/7, 'stat': 'mean'}],
+    'he':  [{'max': 0, 'zero': np.pi/2, 'weight': 1/7, 'stat': 'percentile', 'q': 50}],
+    'eag': [{'max': 0, 'zero': 0.25,      'weight': 1/7, 'stat': 'percentile', 'q': 50}],
+    'rda_robot':   [{'max': 0, 'zero': 1,      'weight': 1/7, 'stat': 'percentile', 'q': 50}],
+    'rpa_robot':   [{'max': 0, 'zero': np.pi, 'weight': 1/7, 'stat': 'percentile', 'q': 50}],
+    'rda_exhibit': [{'max': 0, 'zero': 1,      'weight': 1/7, 'stat': 'percentile', 'q': 50}],
+    'rpa_exhibit': [{'max': 0, 'zero': np.pi, 'weight': 1/7, 'stat': 'percentile', 'q': 50}],
 }
 EAG_THR = 1.0
 
@@ -150,6 +150,12 @@ def handle_postprocessing_for_each_evaluation(df, type_tag):
         return df
 
     elif type_tag == 'he':
+        def normalize_rad(row):
+            rad = float(row.value)
+            rad_normalize = (rad + np.pi) % (2 * np.pi) - np.pi
+            return rad_normalize
+
+        df['value'] = df.apply(normalize_rad, axis=1)
         df['value'] = np.abs(df.value.astype(float))
         return df
 
@@ -170,7 +176,7 @@ def _legacy_to_dict_list(entry):
         # 旧形式 [max, zero, percentile, weight]
         if len(entry) == 4:
             max_v, zero_v, per, w = entry
-            return [ {'max': max_v, 'zero': zero_v, 'weight': w, 'stat': 'percentile', 'q': per} ]
+            return [{'max': max_v, 'zero': zero_v, 'weight': w, 'stat': 'percentile', 'q': per}]
     elif isinstance(entry, dict):
         # 1個だけ辞書で来た場合も受ける
         return [entry]
@@ -227,7 +233,6 @@ def get_evalresult_traj(df_type, etype, score_setting):
         result['score'] = float(np.mean(per_cfg_scores))
 
     return result
-
 
 
 def get_evalresult_boolean(df_type):
@@ -324,7 +329,8 @@ def plot_Score_bar(result, score_setting, output_dir='./'):
     for key, value in result.items():
         if key in score_setting.keys() and isinstance(value, dict) and 'score' in value:
             cfg_list = _legacy_to_dict_list(score_setting[key])
-            w = float(np.mean([c.get('weight', 0.0) for c in cfg_list])) if len(cfg_list) > 0 else 0.0
+            w = float(np.mean([c.get('weight', 0.0)
+                      for c in cfg_list])) if len(cfg_list) > 0 else 0.0
 
             labels.append(key)
             values.append(float(value['score']))

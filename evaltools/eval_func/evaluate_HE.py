@@ -51,6 +51,7 @@ def eval_HE_tl(df_gt_data, df_est, right_on=False):
 
     # calc error distance
     err_dst = df_eval['yaw_est'] - df_eval['yaw_gt']
+    err_dst = (err_dst.values + np.pi) % (2 * np.pi) - np.pi
 
     df_he_tl = pd.DataFrame(data={'timestamp': df_eval.index,
                             'type': type_tag, 'value': err_dst}).set_index('timestamp')
