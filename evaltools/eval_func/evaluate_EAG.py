@@ -34,7 +34,7 @@ def eval_EAG_tl(df_gt_data, df_est, ALIP_timerange=[], mode='T', is_realtime=Fal
     """
     # Set ALIP timerange
     if type(ALIP_timerange) == str:
-        df_ALIP = pd.read_csv(ALIP_timerange, header=0)
+        df_ALIP = pd.read_csv(ALIP_timerange, header=0).astype(float)
     elif len(ALIP_timerange) < 1:
         df_ALIP = pd.DataFrame(
             [[df_gt_data.index[0], df_gt_data.index[-1]]], columns=["ts_start", "ts_end"])
@@ -62,13 +62,6 @@ def eval_EAG_tl(df_gt_data, df_est, ALIP_timerange=[], mode='T', is_realtime=Fal
 
 def process_row(df_gt_data, df_est, ALIP_timerange, mode, is_realtime, verbose):
     try:
-        # if mode == 'T':
-        #     df_eag_tl_ALIP = calc_T_EAG(
-        #         df_gt_data, df_est, ALIP_timerange, is_realtime, verbose)
-        # elif mode == 'D':
-        #     df_eag_tl_ALIP = calc_D_EAG(df_gt_data, df_est, ALIP_timerange)
-        # elif mode == 'A':
-        #     df_eag_tl_ALIP = calc_A_EAG(df_gt_data, df_est, ALIP_timerange)
         df_eag_tl_ALIP = calc_EAG(
             df_gt_data, df_est, ALIP_timerange, is_realtime)
     except Exception as e:
@@ -278,9 +271,8 @@ def calc_EAG(df_gt_data, df_est, ALIP_timerange=[], is_realtime=False):
     ALIP_start = ALIP_timerange[0]
     ALIP_end = ALIP_timerange[-1]
 
-    # extract ALIP timerange
-    df_gt_data = df_gt_data[ALIP_start:ALIP_end]
-    df_est = df_est[ALIP_start:ALIP_end]
+    df_gt_data = set_index_timestamp(df_gt_data)
+    df_est = set_index_timestamp(df_est)
 
     df_gt_data = df_gt_data.dropna(subset=("x", "y"))
     df_est = df_est.dropna(subset=("x", "y"))
@@ -306,7 +298,7 @@ def calc_EAG(df_gt_data, df_est, ALIP_timerange=[], is_realtime=False):
         df_eval["floor_correct"] = (
             df_eval["floor_est"] == df_eval["floor_gt"])
         df_eval = df_eval[df_eval['floor_correct']]
-    df_eval = df_eval[ALIP_start+0.001:ALIP_end-0.001]
+    df_eval = df_eval.loc[ALIP_start+0.001:ALIP_end-0.001]
 
     if len(df_eval) < 1:
         return pd.DataFrame(columns=["timestamp", "type", "value"]).set_index('timestamp')
@@ -327,6 +319,18 @@ def calc_EAG(df_gt_data, df_est, ALIP_timerange=[], is_realtime=False):
         data={'timestamp': df_eval.index, 'type': 'eag', 'value': value_arr}).set_index('timestamp')
 
     return df_eag_tl
+
+
+def set_index_timestamp(df):
+    """
+    """
+    if isinstance(df.index, pd.RangeIndex):
+        if "timestamp" in df.columns:
+            df.set_index("timestamp", inplace=True)
+        elif "unixtime" in df.columns:
+            df.set_index("unixtime", inplace=True)
+
+    return df
 
 
 def calc_elapsed_time(df_eval, ALIP_start, ALIP_end, is_realtime):
@@ -355,15 +359,16 @@ def calc_elapsed_distance(df_eval, ALIP_start, ALIP_end):
     df_eval['x_diff'] = df_eval['x_est'].diff()
     df_eval['y_diff'] = df_eval['y_est'].diff()
     # df_eval.drop(index=df_eval.index[0], inplace=True)
-    df_eval.fillna(0, inplace=True)
+    df_eval['x_diff'].fillna(0, inplace=True)
+    df_eval['y_diff'].fillna(0, inplace=True)
     df_eval['dist_diff'] = np.hypot(
         df_eval['x_diff'], df_eval['y_diff'])
 
     def calc_Sdistance(row):
         idx = row['ts_gt']
 
-        dist_s = np.sum(df_eval[ALIP_start:idx]['dist_diff'].values)
-        dist_e = np.sum(df_eval[idx:ALIP_end]['dist_diff'].values)
+        dist_s = np.sum(df_eval.loc[ALIP_start:idx]['dist_diff'].values)
+        dist_e = np.sum(df_eval.loc[idx:ALIP_end]['dist_diff'].values)
 
         return np.min([dist_s, dist_e])
 
@@ -387,8 +392,8 @@ def calc_elapsed_angle(df_eval, ALIP_start, ALIP_end):
 
     def calc_Srad(row):
         idx = row['ts_gt']
-        Srad_s = np.sum(df_eval[ALIP_start:idx]['yaw_est'].values)
-        Srad_e = np.sum(df_eval[idx:ALIP_end]['yaw_est'].values)
+        Srad_s = np.sum(df_eval.loc[ALIP_start:idx]['yaw_est'].values)
+        Srad_e = np.sum(df_eval.loc[idx:ALIP_end]['yaw_est'].values)
 
         return np.min([Srad_s, Srad_e])
 
@@ -397,15 +402,42 @@ def calc_elapsed_angle(df_eval, ALIP_start, ALIP_end):
 
 
 def combine_arrays_with_semicolon(A, B, C, D):
+    """
+    Concatenate the error values for each time series into a semicolon-separated string.
+    value : "{error_from_gt};{elapsed_time};{elapsed_distance};{elapsed_angle}"
+
+    Parameters
+    ----------
+    A : pandas.DataFrame
+        error_from_gt at each time
+    B : pandas.DataFrame
+        elapsed_time at each time
+    C : pandas.DataFrame
+        elapsed_distance at each time
+    D : pandas.DataFrame
+        elapsed_angle at each time
+
+    Returns
+    -------
+    combined : pandas.DataFrame
+        [timestamp(index), "eag", "A;B;C;D"]
+    """
     A, B, C, D = map(np.asarray, (A, B, C, D))
     if not (A.shape == B.shape == C.shape == D.shape):
         print(A, B, C, D)
         raise ValueError("All input arrays must have the same shape")
 
+    A_s = np.asarray(A, dtype=str)
+    B_s = np.asarray(B, dtype=str)
+    C_s = np.asarray(C, dtype=str)
+    D_s = np.asarray(D, dtype=str)
+
     combined = np.char.add(
-        np.char.add(np.char.add(A.astype(str), ';' +
-                    B.astype(str)), ';' + C.astype(str)),
-        ';' + D.astype(str)
+        np.char.add(
+            np.char.add(A_s, np.char.add(';', B_s)),
+            np.char.add(';', C_s)
+        ),
+        np.char.add(';', D_s)
     )
     return combined
 
